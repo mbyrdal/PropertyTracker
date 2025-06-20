@@ -17,9 +17,7 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await DatabaseSeeder.SeedAsync(dbContext);
+    await SeedDatabaseAsync(app);
 
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -32,3 +30,21 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// This method seeds the database with initial data if it is empty.
+async Task SeedDatabaseAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var services = scope.ServiceProvider;
+
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        await DatabaseSeeder.SeedAsync(context);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred seeding the DB.");
+    }
+}

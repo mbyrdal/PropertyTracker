@@ -6,7 +6,7 @@ namespace PropertyTrackerWebAPI.EFDataContext
     /// <summary>
     /// DatabaseSeeder is responsible for seeding the database with initial data.
     /// </summary>
-    public class DatabaseSeeder
+    public static class DatabaseSeeder
     {
         public static async Task SeedAsync(ApplicationDbContext context)
         {
