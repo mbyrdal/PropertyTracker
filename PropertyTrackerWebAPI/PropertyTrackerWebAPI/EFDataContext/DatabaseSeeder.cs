@@ -1,4 +1,5 @@
-﻿using PropertyTrackerWebAPI.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using PropertyTrackerWebAPI.Models;
 
 namespace PropertyTrackerWebAPI.EFDataContext
 {
@@ -9,26 +10,48 @@ namespace PropertyTrackerWebAPI.EFDataContext
     {
         public static async Task SeedAsync(ApplicationDbContext context)
         {
-            if (!context.Properties.Any())
+            await SeedPropertiesWithTenantsAsync(context);
+
+            // Add more seed methods as needed for other entities
+        }
+
+        private static async Task SeedPropertiesWithTenantsAsync(ApplicationDbContext context)
+        {
+            if (await context.Properties.AnyAsync())
             {
-                var properties = new List<Property>
-                {
-                    new Property { Name = "Property 1", Address = "123 Main St" },
-                    new Property { Name = "Property 2", Address = "456 Elm St" }
-                };
-
-                await context.Properties.AddRangeAsync(properties);
-                await context.SaveChangesAsync();
-
-                var tenants = new List<Tenant>
-                {
-                    new Tenant { FirstName = "John", LastName = "Doe", MoveInDate = DateTime.UtcNow, PropertyId = properties[0].Id },
-                    new Tenant { FirstName = "Jane", LastName = "Smith", MoveInDate = DateTime.UtcNow, PropertyId = properties[1].Id }
-                };
-
-                await context.Tenants.AddRangeAsync(tenants);
-                await context.SaveChangesAsync();
+                return; // Database already seeded
             }
+
+            // Create properties with empty tenant collections
+            var properties = new List<Property>
+            {
+                new()
+                {
+                    Name = "Property 1", Address = "123 Main St, Springfield", Tenants = new List<Tenant>()
+                },
+                new()
+                {
+                    Name = "Property 2", Address = "456 Elm St, Springfield", Tenants = new List<Tenant>()
+                }
+            };
+
+            // Create tenants and associate them with properties
+            var tenants = new List<Tenant>
+            {
+                new()
+                {
+                    FirstName = "John", LastName = "Doe", MoveInDate = DateTime.UtcNow.AddMonths(-3), PropertyId = 1, Property = properties[0], Payments = new List<Payment>()
+                },
+                new()
+                {
+                    FirstName = "Jane", LastName = "Smith", MoveInDate = DateTime.UtcNow.AddMonths(-1), PropertyId = 1, Property = properties[1], Payments = new List<Payment>()
+                },
+            };
+
+            // EF Core will handle the relationship mapping automatically
+            await context.Properties.AddRangeAsync(properties);
+            await context.Tenants.AddRangeAsync(tenants);
+            await context.SaveChangesAsync();
         }
     }
 }
