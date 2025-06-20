@@ -1,0 +1,6 @@
+@PropertyTrackerWebAPI_HostAddress = http://localhost:5108
+
+GET {{PropertyTrackerWebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
