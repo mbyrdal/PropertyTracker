@@ -29,7 +29,8 @@ namespace PropertyTrackerWebAPI.Services
                     Address = p.Address,
                     Latitude = p.Latitude,
                     Longitude = p.Longitude,
-                    TenantCount = p.Tenants.Count
+                    TenantCount = p.Tenants.Count,
+                    TotalMonthlyRent = p.Tenants.Sum(t => t.MonthlyRent)
                 });
             }
             catch (Exception ex)
@@ -51,6 +52,8 @@ namespace PropertyTrackerWebAPI.Services
                     Id = property.Id,
                     Name = property.Name,
                     Address = property.Address,
+                    PurchasePrice = property.PurchasePrice,
+                    PurchaseDate = property.PurchaseDate,
                     Latitude = property.Latitude,
                     Longitude = property.Longitude,
                     Tenants = property.Tenants.Select(t => new TenantDto
@@ -58,10 +61,17 @@ namespace PropertyTrackerWebAPI.Services
                         Id = t.Id,
                         FirstName = t.FirstName,
                         LastName = t.LastName,
+                        MonthlyRent = t.MonthlyRent,
                         MoveInDate = t.MoveInDate,
                         MoveOutDate = t.MoveInDate.AddDays(365), // Example logic for move-out date, adjust as needed
                         PropertyId = t.PropertyId,
-                        PropertyName = property.Name // Include property name for convenience
+                        PropertyName = property.Name, // Include property name for convenience
+                        Payments = t.Payments.Select(p => new PaymentDto
+                        {
+                            Id = p.Id,
+                            Amount = p.Amount,
+                            PaymentDate = p.PaymentDate,
+                        }).ToList()
                     }).ToList()
                 };
             }

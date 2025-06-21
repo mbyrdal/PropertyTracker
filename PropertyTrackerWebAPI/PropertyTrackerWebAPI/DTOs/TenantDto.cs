@@ -8,18 +8,19 @@ namespace PropertyTrackerWebAPI.DTOs
 
         [Required]
         [StringLength(50)]
-        public string FirstName { get; set; }
+        public required string FirstName { get; set; }
 
         [Required]
         [StringLength(50)]
-        public string LastName { get; set; }
+        public required string LastName { get; set; }
+        public decimal MonthlyRent { get; set; } // in DKK
 
         [DataType(DataType.Date)]
         public DateTime MoveInDate { get; set; }
 
         [DataType(DataType.Date)]
         public DateTime? MoveOutDate { get; set; }
-
+        public IEnumerable<PaymentDto> Payments { get; set; } = new List<PaymentDto>();
         public int PropertyId { get; set; }
         public string? PropertyName { get; set; } // Added for convenience
     }

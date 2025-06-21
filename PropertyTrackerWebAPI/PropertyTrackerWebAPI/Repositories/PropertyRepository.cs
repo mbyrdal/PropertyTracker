@@ -25,6 +25,8 @@ namespace PropertyTrackerWebAPI.Repositories
             {
                 return await _context.Properties
                 .Include(p => p.Tenants)
+                .ThenInclude(t => t.Payments) // Include payments for each tenant
+                .AsNoTracking() // Use AsNoTracking for read-only operations
                 .ToListAsync();
             }
             catch(Exception ex)
@@ -43,7 +45,10 @@ namespace PropertyTrackerWebAPI.Repositories
         {
             try
             {
-                return await _context.Properties.Include(p => p.Tenants)
+                return await _context.Properties
+                .Include(p => p.Tenants)
+                .ThenInclude(t => t.Payments) // Include payments for each tenant
+                .AsNoTracking() // Use AsNoTracking for read-only operations
                 .FirstOrDefaultAsync(p => p.Id == id);
             }
             catch (Exception ex)

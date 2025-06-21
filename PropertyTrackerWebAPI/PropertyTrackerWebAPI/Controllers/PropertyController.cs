@@ -151,5 +151,42 @@ namespace PropertyTrackerWebAPI.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+
+        /* TODO: ADD FUNCTIONALITY TO ADD TENANT TO PROPERTY IN DAL AND BLL
+        // POST: api/property/{propertyId}/tenants
+        public async Task<ActionResult<TenantDto>> AddTenantToProperty(int propertyId, TenantCreateDto tenantDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                if(!await _propertyService.PropertyExistsAsync(propertyId))
+                {
+                    return NotFound("Property not found");
+                }
+
+                // Add validation for monthly rent if needed
+                if(tenantDto.MonthlyRent <= 0)
+                {
+                    return BadRequest("Monthly rent must be a positive value.");
+                }
+
+                
+
+            }
+            catch(ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Validation error when adding tenant to property");
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error adding tenant to property {propertyId}");
+                return StatusCode(500, "Internal server error");
+            }   
+        } */
     }
 }
