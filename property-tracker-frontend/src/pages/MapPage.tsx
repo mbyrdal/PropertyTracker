@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import EnhancedPropertyMap from '../components/EnhancedPropertyMap'; 
-import type { EnhancedProperty } from '../types/property'; // Changed import
+import EnhancedPropertyMap from '../components/EnhancedPropertyMap';
+import type { EnhancedProperty } from '../types/property';
 
 export default function MapPage() {
-  const [properties, setProperties] = useState<EnhancedProperty[]>([]); // Updated type
+  const [properties, setProperties] = useState<EnhancedProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -12,12 +12,47 @@ export default function MapPage() {
       try {
         const response = await fetch('/api/property');
         if (!response.ok) {
-          throw new Error('Failed to fetch properties');
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data: EnhancedProperty[] = await response.json(); // Updated type
-        setProperties(data);
+        const apiData = await response.json();
+        
+        // Transform API data to match our frontend structure
+        const transformedData = apiData.map((property: any) => ({
+          id: property.id.toString(),
+          name: property.name,
+          address: property.address,
+          status: 'Active',
+          lat: property.latitude,
+          lng: property.longitude,
+          purchasePrice: property.purchasePrice,
+          purchaseDate: property.purchaseDate,
+          squareMeters: property.squareMeters,
+          tenantCount: property.tenantCount,
+          financials: {
+            monthlyIncome: property.totalMonthlyRent,
+            monthlyExpenses: Math.round(property.totalMonthlyRent * 0.3), // 30% expense estimate
+            cashFlow: property.totalMonthlyRent - Math.round(property.totalMonthlyRent * 0.3),
+            yield: parseFloat(((property.totalMonthlyRent * 12 / property.purchasePrice) * 100).toFixed(1))
+          },
+          maintenance: {
+            lastService: new Date(
+              new Date(property.purchaseDate).setMonth(
+                new Date(property.purchaseDate).getMonth() - 3
+              )
+            ).toISOString(),
+            nextScheduled: new Date(
+              new Date(property.purchaseDate).setMonth(
+                new Date(property.purchaseDate).getMonth() + 3
+              )
+            ).toISOString(),
+            urgentIssues: Math.min(property.tenantCount, 3) // Max 3 issues
+          }
+        }));
+
+        setProperties(transformedData);
       } catch (error) {
-        setError(error instanceof Error ? error.message : 'An error occurred');
+        console.error('Fetch error:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error');
       } finally {
         setLoading(false);
       }
@@ -56,5 +91,9 @@ export default function MapPage() {
     );
   }
 
-  return <EnhancedPropertyMap properties={properties} />;
+  return (
+    <div className="h-screen w-full">
+      <EnhancedPropertyMap properties={properties} />
+    </div>
+  );
 }

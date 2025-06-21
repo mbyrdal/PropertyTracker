@@ -1,9 +1,12 @@
 import React from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
-import type { PopupEvent } from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Home, Landmark, Receipt, TrendingUp, Percent, CalendarCheck, CalendarClock, AlertTriangle, Wrench, CircleDollarSign, BadgeInfo } from "lucide-react";
+import { 
+  Home, Landmark, Receipt, TrendingUp, Percent, 
+  AlertTriangle, BadgeInfo, Square 
+} from "lucide-react";
+import type { EnhancedProperty } from "../types/property";
 
 // Fix Leaflet marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -13,28 +16,28 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-export interface EnhancedProperty {
-  id: string;
-  address: string;
-  status: string;
-  lat: number;
-  lng: number;
-  financials: {
-    monthlyIncome: number;
-    monthlyExpenses: number;
-    cashFlow: number;
-    yield: number;
-  };
-  maintenance: {
-    lastService: string;
-    nextScheduled?: string;
-    urgentIssues: number;
-  };
-}
-
 interface EnhancedPropertyMapProps {
   properties: EnhancedProperty[];
+  totalYield?: number;
 }
+
+const PortfolioHeader = ({ properties, totalYield }: { properties: EnhancedProperty[], totalYield?: number }) => {
+  return (
+    <div className="portfolio-header">
+      <h1 className="portfolio-title">Property Portfolio Map</h1>
+      <div className="portfolio-stats">
+        <span className="stat-item">
+          <strong>Total Properties:</strong> {properties.length}
+        </span>
+        {totalYield && (
+          <span className="stat-item">
+            <strong>Avg Yield:</strong> {totalYield.toFixed(1)}%
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const SmartPopup = ({ property }: { property: EnhancedProperty }) => {
   const popupRef = React.useRef<L.Popup>(null);
@@ -43,299 +46,262 @@ const SmartPopup = ({ property }: { property: EnhancedProperty }) => {
     if (popupRef.current) {
       const popup = popupRef.current;
       popup.options.autoPan = true;
-      popup.options.autoPanPaddingTopLeft = L.point(20, 20);
-      popup.options.autoPanPaddingBottomRight = L.point(20, 20);
-      popup.options.maxWidth = 300;
-      popup.options.minWidth = 250;
-      popup.options.offset = L.point(0, -25);
+      popup.options.maxWidth = 280;
+      popup.options.minWidth = 240;
+      popup.options.autoPanPadding = [20, 20];
+      popup.options.offset = L.point(0, -10);
     }
   }, []);
 
   return (
-    <Popup ref={popupRef} className="enhanced-popup">
-      <div className="popup-container">
+    <Popup ref={popupRef} className="compact-popup">
+      <div className="popup-content">
         <div className="popup-header">
-          <Home className="icon-lg text-blue-600" />
-          <h3 className="popup-title">{property.address}</h3>
+          <Home className="icon-sm text-blue-600" />
+          <h3 className="popup-title">{property.name}</h3>
+          <div className={`status-badge ${property.status.toLowerCase()}`}>
+            <BadgeInfo className="icon-xs" />
+            <span>{property.status}</span>
+          </div>
         </div>
         
-        <div className={`status-badge ${property.status.toLowerCase()}`}>
-          <BadgeInfo className="icon-sm" />
-          <span>{property.status}</span>
-        </div>
-
-        <div className="popup-section">
-          <div className="section-header">
-            <CircleDollarSign className="icon-md text-purple-600" />
-            <span>Financials</span>
+        <div className="popup-grid">
+          <div className="grid-item">
+            <Landmark className="icon-xs" />
+            <span className="label">Price</span>
+            <span className="value">${property.purchasePrice.toLocaleString()}</span>
           </div>
-          <div className="grid-section">
-            <div className="data-row text-income">
-              <Landmark className="icon-md" />
-              <span>Income:</span>
-              <span>${property.financials.monthlyIncome.toLocaleString()}</span>
-            </div>
-            <div className="data-row text-expense">
-              <Receipt className="icon-md" />
-              <span>Expenses:</span>
-              <span>${property.financials.monthlyExpenses.toLocaleString()}</span>
-            </div>
-            <div className="data-row text-cashflow">
-              <TrendingUp className="icon-md" />
-              <span>Cash Flow:</span>
-              <span>${property.financials.cashFlow.toLocaleString()}</span>
-            </div>
-            <div className="data-row text-yield">
-              <Percent className="icon-md" />
-              <span>Yield:</span>
-              <span>{property.financials.yield}%</span>
-            </div>
+          
+          <div className="grid-item">
+            <Square className="icon-xs" />
+            <span className="label">Size</span>
+            <span className="value">{property.squareMeters}m²</span>
           </div>
-        </div>
-
-        <div className="popup-section">
-          <div className="section-header">
-            <Wrench className="icon-md text-orange-600" />
-            <span>Maintenance</span>
+          
+          <div className="grid-item highlight-income">
+            <TrendingUp className="icon-xs" />
+            <span className="label">Income</span>
+            <span className="value">${property.financials.monthlyIncome.toLocaleString()}</span>
           </div>
-          <div className="grid-section">
-            <div className="data-row">
-              <CalendarCheck className="icon-md text-gray-500" />
-              <span>Last:</span>
-              <span>{property.maintenance.lastService}</span>
-            </div>
-            <div className="data-row">
-              <CalendarClock className="icon-md text-gray-500" />
-              <span>Next:</span>
-              <span>{property.maintenance.nextScheduled || "N/A"}</span>
-            </div>
-            <div className={`data-row ${property.maintenance.urgentIssues > 0 ? 'text-warning' : ''}`}>
-              <AlertTriangle className="icon-md" />
-              <span>Issues:</span>
-              <span>{property.maintenance.urgentIssues}</span>
-            </div>
+          
+          <div className="grid-item highlight-expense">
+            <Receipt className="icon-xs" />
+            <span className="label">Expenses</span>
+            <span className="value">${property.financials.monthlyExpenses.toLocaleString()}</span>
           </div>
+          
+          <div className="grid-item highlight-yield">
+            <Percent className="icon-xs" />
+            <span className="label">Yield</span>
+            <span className="value">{property.financials.yield}%</span>
+          </div>
+          
+          {property.maintenance.urgentIssues > 0 && (
+            <div className="grid-item highlight-warning">
+              <AlertTriangle className="icon-xs" />
+              <span className="label">Issues</span>
+              <span className="value">{property.maintenance.urgentIssues}</span>
+            </div>
+          )}
         </div>
       </div>
     </Popup>
   );
 };
 
-const EnhancedPropertyMap: React.FC<EnhancedPropertyMapProps> = ({ properties }) => {
+const EnhancedPropertyMap: React.FC<EnhancedPropertyMapProps> = ({ properties, totalYield }) => {
   const mapRef = React.useRef<L.Map>(null);
-  const markersRef = React.useRef<{[key: string]: L.Marker}>({});
-  const [activePopup, setActivePopup] = React.useState<string | null>(null);
-  const [hoveredMarker, setHoveredMarker] = React.useState<string | null>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const handleMarkerMouseOver = (e: L.LeafletMouseEvent) => {
-    const marker = e.target as L.Marker;
-    const propertyId = (marker.options as any).title as string;
-    setHoveredMarker(propertyId);
-    
-    if (!activePopup) {
-      marker.openPopup();
-    }
-  };
-
-  const handleMarkerMouseOut = () => {
-    if (!activePopup && hoveredMarker) {
-      const marker = markersRef.current[hoveredMarker];
-      if (marker) {
-        marker.closePopup();
-      }
-    }
-    setHoveredMarker(null);
-  };
-
-  const handleMarkerClick = (e: L.LeafletMouseEvent) => {
-    const marker = e.target as L.Marker;
-    const propertyId = (marker.options as any).title as string;
-    
-    if (activePopup === propertyId) {
-      setActivePopup(null);
-      marker.closePopup();
-    } else {
-      setActivePopup(propertyId);
-      
-      // Close all other popups
-      Object.entries(markersRef.current).forEach(([id, m]) => {
-        if (id !== propertyId) m.closePopup();
-      });
-      
-      marker.openPopup();
-    }
-  };
-
-  const handlePopupClose = (e: PopupEvent) => {
-    const popup = e.popup as L.Popup;
-    const marker = (popup as any)._source as L.Marker;
-    
-    if (marker) {
-      const propertyId = (marker.options as any)?.title as string;
-      if (activePopup === propertyId) {
-        setActivePopup(null);
-      }
-      if (hoveredMarker === propertyId) {
-        setHoveredMarker(null);
-      }
-    }
-  };
+  const center: L.LatLngExpression = properties.length > 0 
+    ? [properties[0].lat, properties[0].lng]
+    : [55.6761, 12.5683];
 
   React.useEffect(() => {
-    const markers = markersRef.current;
-    
-    // Add popupclose event listeners
-    Object.values(markers).forEach(marker => {
-      marker.on('popupclose', handlePopupClose);
-    });
-
-    return () => {
-      // Clean up event listeners
-      Object.values(markers).forEach(marker => {
-        marker.off('popupclose', handlePopupClose);
+    if (mapRef.current && properties.length > 0) {
+      const map = mapRef.current;
+      const bounds = L.latLngBounds(
+        properties.map(prop => [prop.lat, prop.lng])
+      );
+      map.fitBounds(bounds, {
+        padding: [50, 50],
+        maxZoom: 15
       });
-    };
-  }, [activePopup, hoveredMarker]);
+    }
+  }, [properties]);
 
   return (
-    <MapContainer
-      center={[properties[0]?.lat ?? 40.7589, properties[0]?.lng ?? -73.9851]}
-      zoom={12}
-      scrollWheelZoom={true}
-      style={{ height: "80vh", width: "100%" }}
-      ref={mapRef}
-    >
-      <TileLayer
-        attribution='&copy; OpenStreetMap contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-
-      {properties.map((p) => (
-        <Marker 
-          key={p.id} 
-          position={[p.lat, p.lng]}
-          title={p.id}
-          eventHandlers={{
-            click: handleMarkerClick,
-            mouseover: handleMarkerMouseOver,
-            mouseout: handleMarkerMouseOut
-          }}
-          ref={(ref) => {
-            if (ref) {
-              markersRef.current[p.id] = ref;
-            }
-          }}
+    <div className="map-container" ref={containerRef}>
+      <PortfolioHeader properties={properties} totalYield={totalYield} />
+      
+      <div className="map-wrapper">
+        <MapContainer
+          center={center}
+          zoom={13}
+          scrollWheelZoom={true}
+          style={{ height: "100%", width: "100%" }}
+          ref={mapRef}
         >
-          <SmartPopup property={p} />
-        </Marker>
-      ))}
+          <TileLayer
+            attribution='&copy; OpenStreetMap contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
 
+          {properties.map((property) => (
+            <Marker key={property.id} position={[property.lat, property.lng]}>
+              <SmartPopup property={property} />
+            </Marker>
+          ))}
+
+          {/* Convert style tag to regular style object */}
+          <style>
+            {`
+              .compact-popup .leaflet-popup-content-wrapper {
+                border-radius: 6px;
+                padding: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+              }
+              
+              .compact-popup .leaflet-popup-tip {
+                width: 12px;
+                height: 12px;
+              }
+              
+              .popup-content {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                font-size: 13px;
+              }
+              
+              .popup-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 8px;
+                flex-wrap: wrap;
+              }
+              
+              .popup-title {
+                font-weight: 600;
+                margin: 0;
+                font-size: 14px;
+                flex: 1;
+                min-width: 120px;
+              }
+              
+              .status-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 11px;
+                background: #f0f0f0;
+              }
+              
+              .status-badge.active {
+                background: #e6f7ee;
+                color: #0d9b5b;
+              }
+              
+              .status-badge.vacant {
+                background: #fff2e6;
+                color: #e67e22;
+              }
+              
+              .popup-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+              }
+              
+              .grid-item {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 4px;
+                border-radius: 4px;
+              }
+              
+              .label {
+                color: #666;
+                flex: 1;
+              }
+              
+              .value {
+                font-weight: 500;
+                min-width: 60px;
+                text-align: right;
+              }
+              
+              .highlight-income { background-color: #f0fdf4; }
+              .highlight-expense { background-color: #fef2f2; }
+              .highlight-yield { background-color: #f5f3ff; }
+              .highlight-warning { background-color: #fffbeb; }
+              
+              .icon-sm { width: 16px; height: 16px; }
+              .icon-xs { width: 14px; height: 14px; }
+            `}
+          </style>
+        </MapContainer>
+      </div>
+
+      {/* Converted to regular style tag */}
       <style>
         {`
-          .leaflet-popup {
-            pointer-events: none;
-            margin-bottom: 20px !important;
-          }
-          .leaflet-popup-content-wrapper {
-            pointer-events: auto;
-          }
-          .leaflet-marker-icon {
-            z-index: 600;
-          }
-          .leaflet-popup-pane {
-            z-index: 500;
-          }
-          .enhanced-popup {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-          }
-          .popup-container {
-            padding: 8px;
-          }
-          .popup-header {
+          .map-container {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
+            flex-direction: column;
+            height: calc(100vh - 20px);
+            max-height: 1200px;
+            min-height: 500px;
+            padding: 10px;
+            box-sizing: border-box;
           }
-          .popup-title {
-            margin: 0;
-            font-size: 16px;
+          
+          .portfolio-header {
+            padding: 12px 16px;
+            background: #ffffff;
+            border-radius: 8px 8px 0 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 4px;
+            z-index: 1000;
+          }
+          
+          .portfolio-title {
+            font-size: 1.5rem;
+            margin: 0 0 8px 0;
+            color: #2d3748;
             font-weight: 600;
           }
-          .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            margin-bottom: 12px;
+          
+          .portfolio-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 1rem;
+            color: #4a5568;
           }
-          .status-badge.active {
-            background-color: #e6f7ee;
-            color: #10b981;
-          }
-          .status-badge.pending {
-            background-color: #fff4e6;
-            color: #f59e0b;
-          }
-          .status-badge.inactive {
-            background-color: #f3e8ff;
-            color: #8b5cf6;
-          }
-          .popup-section {
-            margin-bottom: 12px;
-          }
-          .section-header {
+          
+          .stat-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
+            gap: 6px;
+          }
+          
+          .stat-item strong {
             font-weight: 500;
+            color: #2d3748;
           }
-          .grid-section {
-            display: grid;
-            grid-template-columns: auto 1fr auto;
-            gap: 8px;
-            font-size: 14px;
-          }
-          .data-row {
-            display: contents;
-          }
-          .data-row > * {
-            display: flex;
-            align-items: center;
-          }
-          .text-income {
-            color: #10b981;
-          }
-          .text-expense {
-            color: #ef4444;
-          }
-          .text-cashflow {
-            color: #3b82f6;
-          }
-          .text-yield {
-            color: #8b5cf6;
-          }
-          .text-warning {
-            color: #f59e0b;
-          }
-          .icon-sm {
-            width: 14px;
-            height: 14px;
-          }
-          .icon-md {
-            width: 16px;
-            height: 16px;
-          }
-          .icon-lg {
-            width: 18px;
-            height: 18px;
+          
+          .map-wrapper {
+            flex: 1;
+            border-radius: 0 0 8px 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
           }
         `}
       </style>
-    </MapContainer>
+    </div>
   );
 };
 
