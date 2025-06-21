@@ -27,3 +27,213 @@ body {
   width: 100%;
   position: relative;
 }
+
+/* Leaflet Popup Customization */
+.enhanced-popup .leaflet-popup-content-wrapper {
+  border-radius: 10px;
+  padding: 0;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2);
+}
+
+.enhanced-popup .leaflet-popup-content {
+  margin: 0;
+  width: 100% !important;
+}
+
+/* Popup Container */
+.popup-container {
+  width: 300px;
+  padding: 12px;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Header Styles */
+.popup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 10px;
+}
+
+.popup-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.status-active {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.status-pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+/* Sections */
+.popup-section {
+  margin-bottom: 12px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+/* Grid Layout */
+.grid-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding-left: 24px;
+}
+
+.data-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+}
+
+.data-value {
+  font-weight: 500;
+  margin-left: auto;
+}
+
+/* Icon Sizes */
+.icon-sm {
+  width: 14px;
+  height: 14px;
+}
+
+.icon-md {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-lg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Color System */
+.text-income {
+  color: #16a34a;
+}
+
+.text-expense {
+  color: #dc2626;
+}
+
+.text-cashflow {
+  color: #2563eb;
+}
+
+.text-yield {
+  color: #d97706;
+}
+
+.text-warning {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* Enhanced Popup Styles */
+.enhanced-popup .leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: 0 3px 14px rgba(0,0,0,0.2);
+}
+
+.enhanced-popup .leaflet-popup-tip {
+  width: 16px;
+  height: 16px;
+}
+
+.popup-container {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.popup-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  margin-bottom: 12px;
+}
+
+.status-badge.active {
+  background-color: #e6f7ee;
+  color: #10b981;
+}
+
+.status-badge.pending {
+  background-color: #fff3e6;
+  color: #f59e0b;
+}
+
+.popup-section {
+  margin: 12px 0;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #334155;
+}
+
+.grid-section {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 0.9rem;
+}
+
+.data-row {
+  display: contents;
+}
+
+.text-income { color: #10b981; }
+.text-expense { color: #ef4444; }
+.text-cashflow { color: #3b82f6; }
+.text-yield { color: #8b5cf6; }
+.text-warning { color: #f59e0b; }
