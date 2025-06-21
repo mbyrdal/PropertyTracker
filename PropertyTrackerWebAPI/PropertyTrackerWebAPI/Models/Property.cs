@@ -2,8 +2,6 @@
 {
     public class Property
     {
-
-
         public Property()
         {
             Tenants = new List<Tenant>();

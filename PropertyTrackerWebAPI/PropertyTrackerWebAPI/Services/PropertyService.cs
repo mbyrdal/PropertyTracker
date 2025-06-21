@@ -27,6 +27,8 @@ namespace PropertyTrackerWebAPI.Services
                     Id = p.Id,
                     Name = p.Name,
                     Address = p.Address,
+                    Latitude = p.Latitude,
+                    Longitude = p.Longitude,
                     TenantCount = p.Tenants.Count
                 });
             }
@@ -49,6 +51,8 @@ namespace PropertyTrackerWebAPI.Services
                     Id = property.Id,
                     Name = property.Name,
                     Address = property.Address,
+                    Latitude = property.Latitude,
+                    Longitude = property.Longitude,
                     Tenants = property.Tenants.Select(t => new TenantDto
                     {
                         Id = t.Id,
