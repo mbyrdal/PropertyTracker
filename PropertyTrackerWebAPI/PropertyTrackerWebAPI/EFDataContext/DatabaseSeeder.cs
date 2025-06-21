@@ -27,11 +27,19 @@ namespace PropertyTrackerWebAPI.EFDataContext
             {
                 new()
                 {
-                    Name = "Property 1", Address = "123 Main St, Springfield", Tenants = new List<Tenant>()
+                    Name = "Property 1", 
+                    Address = "123 Main St, Springfield", 
+                    Latitude = 39.7817, // Example coordinates for Springfield, IL
+                    Longitude = -89.6501, // Example coordinates for Springfield, IL
+                    Tenants = new List<Tenant>()
                 },
                 new()
                 {
-                    Name = "Property 2", Address = "456 Elm St, Springfield", Tenants = new List<Tenant>()
+                    Name = "Property 2", 
+                    Address = "456 Elm St, Springfield", 
+                    Latitude = 39.7939, // Example coordinates for Springfield, IL
+                    Longitude = -89.6446, // Example coordinates for Springfield, IL
+                    Tenants = new List<Tenant>()
                 }
             };
 

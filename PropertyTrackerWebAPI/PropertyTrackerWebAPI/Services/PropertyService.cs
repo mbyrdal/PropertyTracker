@@ -8,11 +8,13 @@ namespace PropertyTrackerWebAPI.Services
     {
         private readonly IPropertyRepository _propertyRepository;
         private readonly ILogger<PropertyService> _logger;
+        private readonly GeocodingService _geocodingService;
 
-        public PropertyService(IPropertyRepository propertyRepository, ILogger<PropertyService> logger)
+        public PropertyService(IPropertyRepository propertyRepository, ILogger<PropertyService> logger, GeocodingService geocodingService)
         {
             _propertyRepository = propertyRepository;
             _logger = logger;
+            _geocodingService = geocodingService;
         }
 
         public async Task<IEnumerable<PropertyDto>> GetAllPropertiesAsync()
@@ -70,23 +72,34 @@ namespace PropertyTrackerWebAPI.Services
         {
             try
             {
+                // Validate input
                 if (string.IsNullOrWhiteSpace(propertyDto.Address))
                     throw new ArgumentException("Address is required");
+
+                // Format address and geocode
+                var formattedAddress = FormatAddress(propertyDto.Address);
+                var coordinates = await _geocodingService.GetCoordinatesAsync(formattedAddress);
 
                 var property = new Property
                 {
                     Name = propertyDto.Name,
                     Address = FormatAddress(propertyDto.Address),
+                    Latitude = coordinates?.Lat,
+                    Longitude = coordinates?.Lng,
                     Tenants = new List<Tenant>() // Initialize empty collection
                 };
 
+                // Save to database
                 var createdProperty = await _propertyRepository.AddAsync(property);
 
+                // Return DTO
                 return new PropertyDto
                 {
                     Id = createdProperty.Id,
                     Name = createdProperty.Name,
                     Address = createdProperty.Address,
+                    Latitude = createdProperty.Latitude,
+                    Longitude = createdProperty.Longitude,
                     TenantCount = 0
                 };
             }
