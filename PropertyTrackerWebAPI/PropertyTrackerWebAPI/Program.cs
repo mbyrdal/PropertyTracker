@@ -1,11 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using PropertyTrackerWebAPI.EFDataContext;
+using PropertyTrackerWebAPI.Repositories;
+using PropertyTrackerWebAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("NeonDB")));
+
+// Register services and repositories for dependency injection
+builder.Services.AddScoped<IPropertyRepository, PropertyRepository>();
+builder.Services.AddScoped<IPropertyService, PropertyService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
