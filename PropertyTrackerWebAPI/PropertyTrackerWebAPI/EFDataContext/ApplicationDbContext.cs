@@ -14,6 +14,10 @@ namespace PropertyTrackerWebAPI.EFDataContext
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Configure relationships/constraints here if needed
+            modelBuilder.Entity<Tenant>(entity =>
+            {
+                entity.Property(e => e.MonthlyRent).HasColumnType("decimal(18,2)"); // explicitly map the column
+            });
         }
     }
 }

@@ -19,20 +19,20 @@ namespace PropertyTrackerWebAPI.Repositories
         /// Retrieves all properties from the database, including their associated tenants.
         /// </summary>
         /// <returns></returns>
-        public async Task<IEnumerable <Property>> GetAllAsync()
+        public async Task<IEnumerable<Property>> GetAllAsync()
         {
             try
             {
                 return await _context.Properties
-                .Include(p => p.Tenants)
-                .ThenInclude(t => t.Payments) // Include payments for each tenant
-                .AsNoTracking() // Use AsNoTracking for read-only operations
-                .ToListAsync();
+                    .Include(p => p.Tenants)
+                    .ThenInclude(t => t.Payments)
+                    .AsNoTracking()
+                    .ToListAsync();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while retrieving all properties.");
-                throw; // Re-throw for service layer to handle
+                _logger.LogError(ex, "Error retrieving properties");
+                throw;
             }
         }
 

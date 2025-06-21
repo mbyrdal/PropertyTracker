@@ -4,17 +4,17 @@
     {
         public Property()
         {
-            Tenants = new List<Tenant>();
+            Tenants = new List<Tenant>(); // Initialize as List<Tenant>
         }
 
         public int Id { get; set; }
         public string? Name { get; set; }
         public required string Address { get; set; }
-        public int PurchasePrice { get; set; } // in DKK
-        public DateTime PurchaseDate { get; set; } // UTC
-        public int SquareMeters { get; set; } // Size in square meters
-        public double? Latitude { get; set; } // Nullable for cases where geocoding fails
+        public int PurchasePrice { get; set; }
+        public DateTime PurchaseDate { get; set; }
+        public int SquareMeters { get; set; }
+        public double? Latitude { get; set; }
         public double? Longitude { get; set; }
-        public required ICollection<Tenant> Tenants { get; set; }
+        public ICollection<Tenant> Tenants { get; set; } // Changed to ICollection
     }
 }

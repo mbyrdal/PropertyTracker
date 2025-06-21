@@ -4,10 +4,21 @@ namespace PropertyTrackerWebAPI.DTOs
 {
     public class PropertyUpdateDto
     {
-        public string? Name { get; set; }
+        [Required]
+        public string Name { get; set; } = string.Empty;
 
         [Required]
-        [StringLength(200)]
-        public string? Address { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+
+        [Range(1, int.MaxValue)]
+        public int PurchasePrice { get; set; }  // Added
+
+        public DateTime PurchaseDate { get; set; }  // Added
+
+        [Range(1, int.MaxValue)]
+        public int SquareMeters { get; set; }  // Added
+
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
     }
 }

@@ -22,21 +22,31 @@ namespace PropertyTrackerWebAPI.Services
             try
             {
                 var properties = await _propertyRepository.GetAllAsync();
+
+                if (properties == null)
+                {
+                    _logger.LogWarning("Repository returned null properties collection");
+                    return Enumerable.Empty<PropertyDto>();
+                }
+
                 return properties.Select(p => new PropertyDto
                 {
                     Id = p.Id,
-                    Name = p.Name,
-                    Address = p.Address,
+                    Name = p.Name ?? "Unnamed Property",
+                    Address = p.Address ?? string.Empty,
+                    PurchasePrice = p.PurchasePrice,
+                    PurchaseDate = p.PurchaseDate,
+                    SquareMeters = p.SquareMeters,
                     Latitude = p.Latitude,
                     Longitude = p.Longitude,
-                    TenantCount = p.Tenants.Count,
-                    TotalMonthlyRent = p.Tenants.Sum(t => t.MonthlyRent)
-                });
+                    TenantCount = p.Tenants?.Count ?? 0,
+                    TotalMonthlyRent = p.Tenants?.Sum(t => t.MonthlyRent) ?? 0
+                }).ToList();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving properties");
-                throw;
+                _logger.LogError(ex, "Database operation failed. Error: {Error}", ex.Message);
+                throw new ApplicationException("Property retrieval failed", ex);
             }
         }
 
@@ -98,6 +108,9 @@ namespace PropertyTrackerWebAPI.Services
                 {
                     Name = propertyDto.Name,
                     Address = FormatAddress(propertyDto.Address),
+                    PurchasePrice = propertyDto.PurchasePrice,
+                    PurchaseDate = propertyDto.PurchaseDate,
+                    SquareMeters = propertyDto.SquareMeters,
                     Latitude = coordinates?.Lat,
                     Longitude = coordinates?.Lng,
                     Tenants = new List<Tenant>() // Initialize empty collection
@@ -112,9 +125,14 @@ namespace PropertyTrackerWebAPI.Services
                     Id = createdProperty.Id,
                     Name = createdProperty.Name,
                     Address = createdProperty.Address,
+                    PurchasePrice = createdProperty.PurchasePrice,
+                    PurchaseDate = createdProperty.PurchaseDate,
+                    SquareMeters = createdProperty.SquareMeters,
                     Latitude = createdProperty.Latitude,
                     Longitude = createdProperty.Longitude,
-                    TenantCount = 0
+                    TenantCount = 0,
+                    TotalMonthlyRent = 0 // Initially no tenants, so rent is 0
+
                 };
             }
             catch (Exception ex)
@@ -137,6 +155,9 @@ namespace PropertyTrackerWebAPI.Services
 
                 property.Name = propertyDto.Name;
                 property.Address = FormatAddress(propertyDto.Address);
+                property.PurchasePrice = propertyDto.PurchasePrice;
+                property.PurchaseDate = propertyDto.PurchaseDate;
+                property.SquareMeters = propertyDto.SquareMeters;
 
                 await _propertyRepository.UpdateAsync(property);
             }

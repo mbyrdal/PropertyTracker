@@ -1,27 +1,15 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace PropertyTrackerWebAPI.DTOs
+﻿namespace PropertyTrackerWebAPI.DTOs
 {
     public class TenantDto
     {
         public int Id { get; set; }
-
-        [Required]
-        [StringLength(50)]
-        public required string FirstName { get; set; }
-
-        [Required]
-        [StringLength(50)]
-        public required string LastName { get; set; }
-        public decimal MonthlyRent { get; set; } // in DKK
-
-        [DataType(DataType.Date)]
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
         public DateTime MoveInDate { get; set; }
-
-        [DataType(DataType.Date)]
-        public DateTime? MoveOutDate { get; set; }
-        public IEnumerable<PaymentDto> Payments { get; set; } = new List<PaymentDto>();
+        public DateTime? MoveOutDate { get; set; } // Nullable for tenants who haven't moved out yet
+        public decimal MonthlyRent { get; set; } // Added
         public int PropertyId { get; set; }
-        public string? PropertyName { get; set; } // Added for convenience
+        public string PropertyName { get; set; } = string.Empty; // Added for convenience
+        public List<PaymentDto> Payments { get; set; } = new();
     }
 }

@@ -24,13 +24,15 @@ namespace PropertyTrackerWebAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("Getting all properties");
                 var properties = await _propertyService.GetAllPropertiesAsync();
+                _logger.LogInformation($"Retrieved {properties.Count()} properties");
                 return Ok(properties);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting all properties");
-                return StatusCode(500, "Internal server error");
+                _logger.LogError(ex, "Error fetching properties. Full stack: {StackTrace}", ex.ToString());
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
