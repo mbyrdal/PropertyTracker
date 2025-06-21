@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { EnhancedProperty } from "../types/property";
 import { useNavigation } from "../context/NavigationContext";
+import "./EnhancedPropertyMap.css";
 
 // Fix Leaflet marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -20,6 +21,51 @@ L.Icon.Default.mergeOptions({
 interface EnhancedPropertyMapProps {
   properties: EnhancedProperty[];
 }
+
+const StatusLegend = () => (
+  <div className="map-legend">
+    <h4>Ejendomsstatus</h4>
+    <div className="legend-item">
+      <span className="legend-color active"></span>
+      <span>Aktiv (God)</span>
+    </div>
+    <div className="legend-item">
+      <span className="legend-color active-issues"></span>
+      <span>Aktiv (Vedligehold anmodet)</span>
+    </div>
+    <div className="legend-item">
+      <span className="legend-color vacant"></span>
+      <span>Ledig</span>
+    </div>
+    <div className="legend-item">
+      <span className="legend-color vacant-issues"></span>
+      <span>Ledig (Istandsættelse nødvendig)</span>
+    </div>
+  </div>
+);
+
+const getMarkerColor = (property: EnhancedProperty) => {
+  if (property.status.toLowerCase() === 'vacant') {
+    return property.maintenance.urgentIssues > 0 ? '#c62828' : '#e74c3c';
+  }
+  if (property.maintenance.urgentIssues > 0) return '#e67e22';
+  return '#2ecc71';
+};
+
+const createMarkerIcon = (property: EnhancedProperty, isHovered: boolean) => {
+  const color = getMarkerColor(property);
+  return L.divIcon({
+    className: `property-marker ${isHovered ? 'hovered' : ''}`,
+    html: `
+      <div class="marker-pin" style="background: ${color}">
+        ${property.maintenance.urgentIssues > 0 ? 
+          `<span class="issue-count">${property.maintenance.urgentIssues}</span>` : ''}
+      </div>
+    `,
+    iconSize: isHovered ? [36, 50] : [30, 42],
+    iconAnchor: isHovered ? [18, 50] : [15, 42]
+  });
+};
 
 const PortfolioHeader = ({ properties }: { properties: EnhancedProperty[] }) => {
   const { currentView, setCurrentView } = useNavigation();
@@ -37,7 +83,7 @@ const PortfolioHeader = ({ properties }: { properties: EnhancedProperty[] }) => 
     <div className="portfolio-header">
       <div className="header-content">
         <div className="header-main">
-          <h1 className="portfolio-title">Property Portfolio</h1>
+          <h1 className="portfolio-title">Ejendomsportefølje</h1>
           <nav className="nav-links">
             <button 
               onClick={() => setCurrentView('dashboard')}
@@ -51,35 +97,34 @@ const PortfolioHeader = ({ properties }: { properties: EnhancedProperty[] }) => 
               className={`nav-link ${currentView === 'map' ? 'active' : ''}`}
             >
               <MapPin className="icon-sm" />
-              Map View
+              Kortvisning
             </button>
             <button 
               onClick={() => setCurrentView('list')}
               className={`nav-link ${currentView === 'list' ? 'active' : ''}`}
             >
               <List className="icon-sm" />
-              Property List
+              Ejendomsliste
             </button>
           </nav>
         </div>
         
         <div className="portfolio-stats">
           <div className="stat-card">
-            <span className="stat-label">Total Properties</span>
+            <span className="stat-label">Antal ejendomme</span>
             <span className="stat-value">{totalProperties}</span>
           </div>
           <div className="stat-card highlight-value">
-            <span className="stat-label">Portfolio Value</span>
-            <span className="stat-value">${(totalValue / 1000000).toFixed(1)}M</span>
+            <span className="stat-label">Porteføljeværdi</span>
+            <span className="stat-value">{(totalValue / 1000000).toLocaleString('da-DK', {maximumFractionDigits: 1})} mio. kr.</span>
           </div>
-          {/* FIX: improved contrast for Avg Yield card */}
           <div className="stat-card highlight-yield">
-            <span className="stat-label">Avg Yield</span>
-            <span className="stat-value">{avgYield.toFixed(1)}%</span>
+            <span className="stat-label">Gns. afkast</span>
+            <span className="stat-value">{avgYield.toLocaleString('da-DK', {maximumFractionDigits: 1})}%</span>
           </div>
           <div className="stat-card highlight-cashflow">
-            <span className="stat-label">Monthly Cash Flow</span>
-            <span className="stat-value">${totalCashFlow.toLocaleString()}</span>
+            <span className="stat-label">Månedlig cash flow</span>
+            <span className="stat-value">{totalCashFlow.toLocaleString('da-DK')} kr.</span>
           </div>
         </div>
       </div>
@@ -101,56 +146,85 @@ const SmartPopup = ({ property }: { property: EnhancedProperty }) => {
     }
   }, []);
 
+  const getMaintenanceStatus = () => {
+    if (property.maintenance.urgentIssues === 0) return null;
+    
+    return property.status === 'Active'
+      ? {
+          type: 'tenant',
+          text: `${property.maintenance.urgentIssues} lejeranmodning(er)`,
+          description: 'Lejer har anmodet om istandsættelse',
+          icon: '🛠️'
+        }
+      : {
+          type: 'property',
+          text: `${property.maintenance.urgentIssues} istandsættelse(r)`,
+          description: 'Kræver istandsættelse før udlejning',
+          icon: '🏗️'
+        };
+  };
+
+  const maintenanceStatus = getMaintenanceStatus();
+
   return (
     <Popup ref={popupRef} className="compact-popup">
       <div className="popup-content">
         <div className="popup-header">
           <Home className="icon-sm text-blue-600" />
           <h3 className="popup-title">{property.name}</h3>
-          <div className={`status-badge ${property.status.toLowerCase()}`}>
+          <div className={`status-badge ${property.status.toLowerCase()} ${maintenanceStatus?.type || ''}`}>
             <BadgeInfo className="icon-xs" />
-            <span>{property.status}</span>
+            <span>
+              {property.status === 'Active' ? 'Aktiv' : 'Ledig'}
+              {maintenanceStatus && (
+                <span className="badge-count"> • {maintenanceStatus.text}</span>
+              )}
+            </span>
           </div>
         </div>
         
         <div className="popup-grid">
           <div className="grid-item">
             <Landmark className="icon-xs" />
-            <span className="label">Price</span>
-            <span className="value">${property.purchasePrice.toLocaleString()}</span>
+            <span className="label">Pris</span>
+            <span className="value">{property.purchasePrice.toLocaleString('da-DK')} kr.</span>
           </div>
           
           <div className="grid-item">
             <Square className="icon-xs" />
-            <span className="label">Size</span>
+            <span className="label">Areal</span>
             <span className="value">{property.squareMeters}m²</span>
           </div>
           
           <div className="grid-item highlight-income">
             <TrendingUp className="icon-xs" />
-            <span className="label">Income</span>
-            <span className="value">${property.financials.monthlyIncome.toLocaleString()}</span>
+            <span className="label">Indtægt</span>
+            <span className="value">{property.financials.monthlyIncome.toLocaleString('da-DK')} kr.</span>
           </div>
           
           <div className="grid-item highlight-expense">
             <Receipt className="icon-xs" />
-            <span className="label">Expenses</span>
-            <span className="value">${property.financials.monthlyExpenses.toLocaleString()}</span>
+            <span className="label">Udgifter</span>
+            <span className="value">{property.financials.monthlyExpenses.toLocaleString('da-DK')} kr.</span>
           </div>
           
           <div className="grid-item highlight-yield">
             <Percent className="icon-xs" />
-            <span className="label">Yield</span>
-            <span className="value">{property.financials.yield}%</span>
+            <span className="label">Afkast</span>
+            <span className="value">{property.financials.yield.toLocaleString('da-DK')}%</span>
           </div>
-          
-          {property.maintenance.urgentIssues > 0 && (
-            <div className="grid-item highlight-warning">
-              <AlertTriangle className="icon-xs" />
-              <span className="label">Issues</span>
-              <span className="value">{property.maintenance.urgentIssues}</span>
-            </div>
-          )}
+        </div>
+        
+        <div className="popup-status-help">
+          <small className={maintenanceStatus?.type || ''}>
+            {maintenanceStatus ? (
+              <>{maintenanceStatus.icon} {maintenanceStatus.description}</>
+            ) : property.status === 'Active' ? (
+              '✓ Udlejet uden problemer'
+            ) : (
+              '⚠️ Ingen aktive lejere'
+            )}
+          </small>
         </div>
       </div>
     </Popup>
@@ -195,241 +269,28 @@ const EnhancedPropertyMap: React.FC<EnhancedPropertyMapProps> = ({ properties })
           ref={mapRef}
         >
           <TileLayer
-            attribution='&copy; OpenStreetMap contributors'
+            attribution='&copy; OpenStreetMap bidragydere'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          {properties.map((property) => (
-            <Marker key={property.id} position={[property.lat, property.lng]}>
-              <SmartPopup property={property} />
-            </Marker>
-          ))}
+          {properties.map((property) => {
+            const [isHovered, setIsHovered] = useState(false);
+            return (
+              <Marker
+                key={property.id}
+                position={[property.lat, property.lng]}
+                icon={createMarkerIcon(property, isHovered)}
+                eventHandlers={{
+                  mouseover: () => setIsHovered(true),
+                  mouseout: () => setIsHovered(false)
+                }}
+              >
+                <SmartPopup property={property} />
+              </Marker>
+            );
+          })}
 
-          <style>
-            {`
-              .portfolio-header {
-                background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-                color: white;
-                padding: 1rem 1.5rem;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                position: relative;
-                z-index: 1000;
-              }
-
-              .map-container {
-                display: flex;
-                flex-direction: column;
-                height: 100%;
-                width: 100%;
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                padding-bottom: 16px;
-              }
-
-              .map-wrapper {
-                flex: 1;
-                position: relative;
-                height: calc(100% - 120px);
-                padding: 0 16px;
-              }
-
-              .leaflet-container {
-                height: 100% !important;
-                width: 100% !important;
-                border-radius: 8px;
-              }
-
-              .header-content {
-                max-width: 1200px;
-                margin: 0 auto;
-                width: 100%;
-              }
-
-              .header-main {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 1rem;
-                flex-wrap: wrap;
-                gap: 1rem;
-              }
-
-              .portfolio-title {
-                font-size: 1.75rem;
-                margin: 0;
-                font-weight: 600;
-                color: white;
-              }
-
-              .nav-links {
-                display: flex;
-                gap: 1rem;
-                flex-wrap: wrap;
-              }
-
-              .nav-link {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                color: rgba(255, 255, 255, 0.8);
-                text-decoration: none;
-                padding: 0.5rem 1rem;
-                border-radius: 6px;
-                transition: all 0.2s;
-                background: none;
-                border: none;
-                cursor: pointer;
-                font-family: inherit;
-                font-size: 0.95rem;
-              }
-
-              .nav-link:hover {
-                background: rgba(255, 255, 255, 0.1);
-                color: white;
-              }
-
-              .nav-link.active {
-                background: rgba(255, 255, 255, 0.2);
-                color: white;
-              }
-
-              .portfolio-stats {
-                display: flex;
-                gap: 1rem;
-                overflow-x: auto;
-                padding-bottom: 0.5rem;
-              }
-
-              .stat-card {
-                background: rgba(59, 130, 246, 0.2);
-                border-radius: 8px;
-                padding: 0.75rem 1rem;
-                min-width: 160px;
-                flex: 1;
-              }
-
-              .stat-label {
-                font-size: 0.875rem;
-                color: rgba(255, 255, 255, 0.8);
-                display: block;
-                margin-bottom: 0.25rem;
-              }
-
-              .stat-value {
-                font-size: 1.25rem;
-                font-weight: 600;
-                color: white;
-                display: block;
-              }
-
-              /* Border colors only - no background overrides */
-              .highlight-value {
-                border-left: 3px solid #10b981;
-              }
-
-              /* UPDATED: better contrast for Avg Yield card */
-              .highlight-yield {
-                border-left: 3px solid #8b5cf6;
-                background: rgba(59, 130, 246, 0.2);
-              }
-
-              .highlight-yield .stat-label,
-              .highlight-yield .stat-value {
-                color: white;
-              }
-
-              .highlight-cashflow {
-                border-left: 3px solid #3b82f6;
-              }
-
-              .compact-popup .leaflet-popup-content-wrapper {
-                border-radius: 6px;
-                padding: 8px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-              }
-              
-              .compact-popup .leaflet-popup-tip {
-                width: 12px;
-                height: 12px;
-              }
-              
-              .popup-content {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                font-size: 13px;
-              }
-              
-              .popup-header {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-bottom: 8px;
-                flex-wrap: wrap;
-              }
-              
-              .popup-title {
-                font-weight: 600;
-                margin: 0;
-                font-size: 14px;
-                flex: 1;
-                min-width: 120px;
-              }
-              
-              .status-badge {
-                display: inline-flex;
-                align-items: center;
-                gap: 4px;
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-size: 11px;
-                background: #f0f0f0;
-              }
-              
-              .status-badge.active {
-                background: #e6f7ee;
-                color: #0d9b5b;
-              }
-              
-              .status-badge.vacant {
-                background: #fff2e6;
-                color: #e67e22;
-              }
-              
-              .popup-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 6px;
-              }
-              
-              .grid-item {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                padding: 4px;
-                border-radius: 4px;
-              }
-              
-              .label {
-                color: #666;
-                flex: 1;
-              }
-              
-              .value {
-                font-weight: 500;
-                min-width: 60px;
-                text-align: right;
-              }
-              
-              .highlight-income { background-color: #f0fdf4; }
-              .highlight-expense { background-color: #fef2f2; }
-              .highlight-warning { background-color: #fffbeb; }
-              
-              .icon-sm { width: 16px; height: 16px; }
-              .icon-xs { width: 14px; height: 14px; }
-            `}
-          </style>
+          <StatusLegend />
         </MapContainer>
       </div>
     </div>

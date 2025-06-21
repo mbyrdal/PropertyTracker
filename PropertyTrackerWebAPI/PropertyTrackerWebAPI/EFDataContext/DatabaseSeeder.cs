@@ -28,6 +28,12 @@ public static class DatabaseSeeder
         context.Payments.RemoveRange(context.Payments);
         context.Tenants.RemoveRange(context.Tenants);
         context.Properties.RemoveRange(context.Properties);
+
+        // Reset sequences for PostgreSQL
+        await context.Database.ExecuteSqlRawAsync("ALTER SEQUENCE \"Properties_Id_seq\" RESTART WITH 1");
+        await context.Database.ExecuteSqlRawAsync("ALTER SEQUENCE \"Tenants_Id_seq\" RESTART WITH 1");
+        await context.Database.ExecuteSqlRawAsync("ALTER SEQUENCE \"Payments_Id_seq\" RESTART WITH 1");
+
         await context.SaveChangesAsync();
 
         // ----- Properties -----

@@ -1,4 +1,17 @@
 // src/types/property.ts
+export interface Financials {
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  cashFlow: number;
+  yield: number;
+}
+
+export interface Maintenance {
+  lastService: string;
+  nextScheduled?: string;
+  urgentIssues: number;
+}
+
 export interface EnhancedProperty {
   id: string;
   name: string;
@@ -10,21 +23,7 @@ export interface EnhancedProperty {
   purchaseDate: string;
   squareMeters: number;
   tenantCount: number;
-  financials: {
-    monthlyIncome: number;
-    monthlyExpenses: number;
-    cashFlow: number;
-    yield: number;
-  };
-  maintenance: {
-    lastService: string;
-    nextScheduled?: string;
-    urgentIssues: number;
-  };
-  photos: string[]; // Added this field which is used in your components
+  financials: Financials;
+  maintenance: Maintenance;
+  photos: string[];
 }
-
-// Optional legacy type
-export type Property = Omit<EnhancedProperty, 'financials'|'maintenance'> & {
-  // Any legacy fields you need to maintain
-};
