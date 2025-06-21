@@ -3,8 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { 
-  Home, Landmark, Receipt, TrendingUp, Percent, 
-  AlertTriangle, BadgeInfo, Square, MapPin, List 
+  Home, Landmark, Receipt, TrendingUp, Percent, BadgeInfo, Square, MapPin, List 
 } from "lucide-react";
 import type { EnhancedProperty } from "../types/property";
 import { useNavigation } from "../context/NavigationContext";
