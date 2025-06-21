@@ -1,0 +1,162 @@
+﻿using PropertyTrackerWebAPI.DTOs;
+using PropertyTrackerWebAPI.Models;
+using PropertyTrackerWebAPI.Repositories;
+
+namespace PropertyTrackerWebAPI.Services
+{
+    public class PropertyService : IPropertyService
+    {
+        private readonly IPropertyRepository _propertyRepository;
+        private readonly ILogger<PropertyService> _logger;
+
+        public PropertyService(IPropertyRepository propertyRepository, ILogger<PropertyService> logger)
+        {
+            _propertyRepository = propertyRepository;
+            _logger = logger;
+        }
+
+        public async Task<IEnumerable<PropertyDto>> GetAllPropertiesAsync()
+        {
+            try
+            {
+                var properties = await _propertyRepository.GetAllAsync();
+                return properties.Select(p => new PropertyDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Address = p.Address,
+                    TenantCount = p.Tenants.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving properties");
+                throw;
+            }
+        }
+
+        public async Task<PropertyDetailDto?> GetPropertyByIdAsync(int id)
+        {
+            try
+            {
+                var property = await _propertyRepository.GetByIdAsync(id);
+                if (property == null) return null;
+
+                return new PropertyDetailDto
+                {
+                    Id = property.Id,
+                    Name = property.Name,
+                    Address = property.Address,
+                    Tenants = property.Tenants.Select(t => new TenantDto
+                    {
+                        Id = t.Id,
+                        FirstName = t.FirstName,
+                        LastName = t.LastName,
+                        MoveInDate = t.MoveInDate,
+                        MoveOutDate = t.MoveInDate.AddDays(365), // Example logic for move-out date, adjust as needed
+                        PropertyId = t.PropertyId,
+                        PropertyName = property.Name // Include property name for convenience
+                    }).ToList()
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving property {id}");
+                throw;
+            }
+        }
+
+        public async Task<PropertyDto> CreatePropertyAsync(PropertyCreateDto propertyDto)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(propertyDto.Address))
+                    throw new ArgumentException("Address is required");
+
+                var property = new Property
+                {
+                    Name = propertyDto.Name,
+                    Address = FormatAddress(propertyDto.Address),
+                    Tenants = new List<Tenant>() // Initialize empty collection
+                };
+
+                var createdProperty = await _propertyRepository.AddAsync(property);
+
+                return new PropertyDto
+                {
+                    Id = createdProperty.Id,
+                    Name = createdProperty.Name,
+                    Address = createdProperty.Address,
+                    TenantCount = 0
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating property");
+                throw;
+            }
+        }
+
+        public async Task UpdatePropertyAsync(int id, PropertyUpdateDto propertyDto)
+        {
+            try
+            {
+                var property = await _propertyRepository.GetByIdAsync(id);
+                if (property == null)
+                    throw new KeyNotFoundException($"Property {id} not found");
+
+                if (string.IsNullOrWhiteSpace(propertyDto.Address))
+                    throw new ArgumentException("Address is required");
+
+                property.Name = propertyDto.Name;
+                property.Address = FormatAddress(propertyDto.Address);
+
+                await _propertyRepository.UpdateAsync(property);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error updating property {id}");
+                throw;
+            }
+        }
+
+        public async Task DeletePropertyAsync(int id)
+        {
+            try
+            {
+                var property = await _propertyRepository.GetByIdAsync(id);
+                if (property == null)
+                    throw new KeyNotFoundException($"Property {id} not found");
+
+                // Business rule: Can't delete if property has tenants
+                if (property.Tenants?.Any() == true)
+                    throw new InvalidOperationException("Cannot delete property with active tenants");
+
+                await _propertyRepository.DeleteAsync(id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error deleting property {id}");
+                throw;
+            }
+        }
+
+        public async Task<bool> PropertyExistsAsync(int id)
+        {
+            try
+            {
+                return await _propertyRepository.ExistsAsync(id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error checking existence for property {id}");
+                throw;
+            }
+        }
+
+        private string FormatAddress(string address)
+        {
+            return address.Trim().ToUpperInvariant();
+        }
+    }
+}

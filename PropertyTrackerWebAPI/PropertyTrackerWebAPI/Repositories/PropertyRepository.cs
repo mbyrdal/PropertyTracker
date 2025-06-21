@@ -53,7 +53,7 @@ namespace PropertyTrackerWebAPI.Repositories
             }
         }
 
-        public async Task<Property> AddSync(Property property)
+        public async Task<Property> AddAsync(Property property)
         {
             try
             {

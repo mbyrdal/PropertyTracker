@@ -6,7 +6,7 @@ namespace PropertyTrackerWebAPI.Repositories
     {
         Task<IEnumerable<Property>> GetAllAsync();
         Task<Property?> GetByIdAsync(int id);
-        Task<Property> AddSync(Property property);
+        Task<Property> AddAsync(Property property);
         Task UpdateAsync(Property property);
         Task DeleteAsync(int id);
         Task<bool> ExistsAsync(int id);
