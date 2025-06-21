@@ -4,9 +4,10 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { 
   Home, Landmark, Receipt, TrendingUp, Percent, 
-  AlertTriangle, BadgeInfo, Square 
+  AlertTriangle, BadgeInfo, Square, MapPin, List 
 } from "lucide-react";
 import type { EnhancedProperty } from "../types/property";
+import { useNavigation } from "../context/NavigationContext";
 
 // Fix Leaflet marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -18,22 +19,69 @@ L.Icon.Default.mergeOptions({
 
 interface EnhancedPropertyMapProps {
   properties: EnhancedProperty[];
-  totalYield?: number;
 }
 
-const PortfolioHeader = ({ properties, totalYield }: { properties: EnhancedProperty[], totalYield?: number }) => {
+const PortfolioHeader = ({ properties }: { properties: EnhancedProperty[] }) => {
+  const { currentView, setCurrentView } = useNavigation();
+  
+  const totalProperties = properties.length;
+  const totalValue = properties.reduce((sum, p) => sum + p.purchasePrice, 0);
+  const avgYield = properties.length > 0 
+    ? properties.reduce((sum, p) => sum + p.financials.yield, 0) / properties.length
+    : 0;
+  const totalMonthlyIncome = properties.reduce((sum, p) => sum + p.financials.monthlyIncome, 0);
+  const totalMonthlyExpenses = properties.reduce((sum, p) => sum + p.financials.monthlyExpenses, 0);
+  const totalCashFlow = totalMonthlyIncome - totalMonthlyExpenses;
+
   return (
     <div className="portfolio-header">
-      <h1 className="portfolio-title">Property Portfolio Map</h1>
-      <div className="portfolio-stats">
-        <span className="stat-item">
-          <strong>Total Properties:</strong> {properties.length}
-        </span>
-        {totalYield && (
-          <span className="stat-item">
-            <strong>Avg Yield:</strong> {totalYield.toFixed(1)}%
-          </span>
-        )}
+      <div className="header-content">
+        <div className="header-main">
+          <h1 className="portfolio-title">Property Portfolio</h1>
+          <nav className="nav-links">
+            <button 
+              onClick={() => setCurrentView('dashboard')}
+              className={`nav-link ${currentView === 'dashboard' ? 'active' : ''}`}
+            >
+              <Home className="icon-sm" />
+              Dashboard
+            </button>
+            <button 
+              onClick={() => setCurrentView('map')}
+              className={`nav-link ${currentView === 'map' ? 'active' : ''}`}
+            >
+              <MapPin className="icon-sm" />
+              Map View
+            </button>
+            <button 
+              onClick={() => setCurrentView('list')}
+              className={`nav-link ${currentView === 'list' ? 'active' : ''}`}
+            >
+              <List className="icon-sm" />
+              Property List
+            </button>
+          </nav>
+        </div>
+        
+        <div className="portfolio-stats">
+          <div className="stat-card">
+            <span className="stat-label">Total Properties</span>
+            <span className="stat-value">{totalProperties}</span>
+          </div>
+          <div className="stat-card highlight-value">
+            <span className="stat-label">Portfolio Value</span>
+            <span className="stat-value">${(totalValue / 1000000).toFixed(1)}M</span>
+          </div>
+          {/* FIX: improved contrast for Avg Yield card */}
+          <div className="stat-card highlight-yield">
+            <span className="stat-label">Avg Yield</span>
+            <span className="stat-value">{avgYield.toFixed(1)}%</span>
+          </div>
+          <div className="stat-card highlight-cashflow">
+            <span className="stat-label">Monthly Cash Flow</span>
+            <span className="stat-value">${totalCashFlow.toLocaleString()}</span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -109,7 +157,7 @@ const SmartPopup = ({ property }: { property: EnhancedProperty }) => {
   );
 };
 
-const EnhancedPropertyMap: React.FC<EnhancedPropertyMapProps> = ({ properties, totalYield }) => {
+const EnhancedPropertyMap: React.FC<EnhancedPropertyMapProps> = ({ properties }) => {
   const mapRef = React.useRef<L.Map>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -132,14 +180,18 @@ const EnhancedPropertyMap: React.FC<EnhancedPropertyMapProps> = ({ properties, t
 
   return (
     <div className="map-container" ref={containerRef}>
-      <PortfolioHeader properties={properties} totalYield={totalYield} />
+      <PortfolioHeader properties={properties} />
       
       <div className="map-wrapper">
         <MapContainer
           center={center}
           zoom={13}
           scrollWheelZoom={true}
-          style={{ height: "100%", width: "100%" }}
+          style={{ 
+            height: "100%", 
+            width: "100%",
+            minHeight: "calc(100vh - 180px)"
+          }}
           ref={mapRef}
         >
           <TileLayer
@@ -153,9 +205,146 @@ const EnhancedPropertyMap: React.FC<EnhancedPropertyMapProps> = ({ properties, t
             </Marker>
           ))}
 
-          {/* Convert style tag to regular style object */}
           <style>
             {`
+              .portfolio-header {
+                background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+                color: white;
+                padding: 1rem 1.5rem;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                position: relative;
+                z-index: 1000;
+              }
+
+              .map-container {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                width: 100%;
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding-bottom: 16px;
+              }
+
+              .map-wrapper {
+                flex: 1;
+                position: relative;
+                height: calc(100% - 120px);
+                padding: 0 16px;
+              }
+
+              .leaflet-container {
+                height: 100% !important;
+                width: 100% !important;
+                border-radius: 8px;
+              }
+
+              .header-content {
+                max-width: 1200px;
+                margin: 0 auto;
+                width: 100%;
+              }
+
+              .header-main {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1rem;
+                flex-wrap: wrap;
+                gap: 1rem;
+              }
+
+              .portfolio-title {
+                font-size: 1.75rem;
+                margin: 0;
+                font-weight: 600;
+                color: white;
+              }
+
+              .nav-links {
+                display: flex;
+                gap: 1rem;
+                flex-wrap: wrap;
+              }
+
+              .nav-link {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                color: rgba(255, 255, 255, 0.8);
+                text-decoration: none;
+                padding: 0.5rem 1rem;
+                border-radius: 6px;
+                transition: all 0.2s;
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-family: inherit;
+                font-size: 0.95rem;
+              }
+
+              .nav-link:hover {
+                background: rgba(255, 255, 255, 0.1);
+                color: white;
+              }
+
+              .nav-link.active {
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+              }
+
+              .portfolio-stats {
+                display: flex;
+                gap: 1rem;
+                overflow-x: auto;
+                padding-bottom: 0.5rem;
+              }
+
+              .stat-card {
+                background: rgba(59, 130, 246, 0.2);
+                border-radius: 8px;
+                padding: 0.75rem 1rem;
+                min-width: 160px;
+                flex: 1;
+              }
+
+              .stat-label {
+                font-size: 0.875rem;
+                color: rgba(255, 255, 255, 0.8);
+                display: block;
+                margin-bottom: 0.25rem;
+              }
+
+              .stat-value {
+                font-size: 1.25rem;
+                font-weight: 600;
+                color: white;
+                display: block;
+              }
+
+              /* Border colors only - no background overrides */
+              .highlight-value {
+                border-left: 3px solid #10b981;
+              }
+
+              /* UPDATED: better contrast for Avg Yield card */
+              .highlight-yield {
+                border-left: 3px solid #8b5cf6;
+                background: rgba(59, 130, 246, 0.2);
+              }
+
+              .highlight-yield .stat-label,
+              .highlight-yield .stat-value {
+                color: white;
+              }
+
+              .highlight-cashflow {
+                border-left: 3px solid #3b82f6;
+              }
+
               .compact-popup .leaflet-popup-content-wrapper {
                 border-radius: 6px;
                 padding: 8px;
@@ -235,7 +424,6 @@ const EnhancedPropertyMap: React.FC<EnhancedPropertyMapProps> = ({ properties, t
               
               .highlight-income { background-color: #f0fdf4; }
               .highlight-expense { background-color: #fef2f2; }
-              .highlight-yield { background-color: #f5f3ff; }
               .highlight-warning { background-color: #fffbeb; }
               
               .icon-sm { width: 16px; height: 16px; }
@@ -244,63 +432,6 @@ const EnhancedPropertyMap: React.FC<EnhancedPropertyMapProps> = ({ properties, t
           </style>
         </MapContainer>
       </div>
-
-      {/* Converted to regular style tag */}
-      <style>
-        {`
-          .map-container {
-            display: flex;
-            flex-direction: column;
-            height: calc(100vh - 20px);
-            max-height: 1200px;
-            min-height: 500px;
-            padding: 10px;
-            box-sizing: border-box;
-          }
-          
-          .portfolio-header {
-            padding: 12px 16px;
-            background: #ffffff;
-            border-radius: 8px 8px 0 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 4px;
-            z-index: 1000;
-          }
-          
-          .portfolio-title {
-            font-size: 1.5rem;
-            margin: 0 0 8px 0;
-            color: #2d3748;
-            font-weight: 600;
-          }
-          
-          .portfolio-stats {
-            display: flex;
-            gap: 20px;
-            font-size: 1rem;
-            color: #4a5568;
-          }
-          
-          .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-          }
-          
-          .stat-item strong {
-            font-weight: 500;
-            color: #2d3748;
-          }
-          
-          .map-wrapper {
-            flex: 1;
-            border-radius: 0 0 8px 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            background: white;
-          }
-        `}
-      </style>
     </div>
   );
 };

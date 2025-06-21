@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import EnhancedPropertyMap from './components/EnhancedPropertyMap';
-import type { EnhancedProperty } from './types/property';  // Correct import path
+import type { EnhancedProperty } from './types/property';
+import { NavigationProvider } from './context/NavigationContext';
 import 'leaflet/dist/leaflet.css';
 import './index.css';
 
-// Your existing ApiProperty interface remains the same
 interface ApiProperty {
   id: number;
   name: string;
@@ -20,17 +20,13 @@ interface ApiProperty {
 
 const transformProperties = (apiProperties: ApiProperty[]): EnhancedProperty[] => {
   return apiProperties.map(apiProp => {
-    // Calculate years owned
     const purchaseDate = new Date(apiProp.purchaseDate);
-    
-    // Generate maintenance dates based on purchase date
     const lastServiceDate = new Date(purchaseDate);
     lastServiceDate.setMonth(purchaseDate.getMonth() + Math.floor(Math.random() * 12));
     
     const nextServiceDate = new Date(lastServiceDate);
     nextServiceDate.setMonth(lastServiceDate.getMonth() + 6);
     
-    // Calculate yield based on actual purchase price and rent
     const annualRent = apiProp.totalMonthlyRent * 12;
     const yieldValue = annualRent / apiProp.purchasePrice * 100;
     
@@ -48,15 +44,15 @@ const transformProperties = (apiProperties: ApiProperty[]): EnhancedProperty[] =
       financials: {
         monthlyIncome: apiProp.totalMonthlyRent,
         monthlyExpenses: Math.floor(apiProp.totalMonthlyRent * 0.3),
-        cashFlow: 0, // Will be calculated below
+        cashFlow: 0,
         yield: parseFloat(yieldValue.toFixed(1))
       },
       maintenance: {
         lastService: lastServiceDate.toISOString().split('T')[0],
         nextScheduled: nextServiceDate.toISOString().split('T')[0],
-        urgentIssues: Math.floor(Math.random() * 3) // Add this required field
+        urgentIssues: Math.floor(Math.random() * 3)
       },
-      photos: [] // Initialize empty array for photos
+      photos: []
     };
   }).map(p => ({
     ...p,
@@ -85,15 +81,9 @@ function App() {
         }
         
         const enhancedData = transformProperties(apiData);
-        
-        // Filter out properties with invalid coordinates
         const validProperties = enhancedData.filter(p => 
           !isNaN(p.lat) && !isNaN(p.lng) && p.lat !== 0 && p.lng !== 0
         );
-        
-        if (validProperties.length === 0) {
-          console.warn('No properties with valid coordinates found');
-        }
         
         setProperties(validProperties);
       } catch (error) {
@@ -123,11 +113,11 @@ function App() {
   );
 
   return (
-    <div className="app">
-      <div className="map-container">
+    <NavigationProvider>
+      <div className="app" style={{ height: '100%', width: '100%'}}>
         <EnhancedPropertyMap properties={properties} />
       </div>
-    </div>
+    </NavigationProvider>
   );
 }
 
