@@ -33,7 +33,8 @@ namespace PropertyTrackerWebAPI.Services
                 Issuer = _configuration["Jwt:Issuer"],
                 Audience = _configuration["Jwt:Audience"],
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["Jwt:AccessTokenExpiryMinutes"])),
+                Expires = DateTime.UtcNow.AddMinutes(GetTokenExpiryMinutes()),
+                NotBefore = DateTime.UtcNow, // explicitly set NotBefore to current time
                 SigningCredentials = new SigningCredentials(_securityKey, SecurityAlgorithms.HmacSha256Signature)
             };
 
@@ -65,7 +66,7 @@ namespace PropertyTrackerWebAPI.Services
                     ValidIssuer = _configuration["Jwt:Issuer"],
                     ValidAudience = _configuration["Jwt:Audience"],
                     IssuerSigningKey = _securityKey,
-                    ClockSkew = TimeSpan.Zero // Disable tolerance for expiry time
+                    ClockSkew = TimeSpan.FromSeconds(30) // small tolerance
                 }, out _);
 
                 return principal;
@@ -86,6 +87,15 @@ namespace PropertyTrackerWebAPI.Services
         {
             var jwtToken = new JwtSecurityTokenHandler().ReadJwtToken(token);
             return jwtToken.ValidTo < DateTime.UtcNow;
+        }
+
+        private int GetTokenExpiryMinutes()
+        {
+            if (!int.TryParse(_configuration["Jwt:ExpirationMinutes"], out var minutes) || minutes <= 0)
+            {
+                return 15; // Default fallback
+            }
+            return minutes;
         }
     }
 }

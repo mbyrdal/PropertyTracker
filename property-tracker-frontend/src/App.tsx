@@ -157,7 +157,7 @@ function App() {
 // Separate component for the login route
 function LoginWrapper() {
   const { login } = useAuth();
-  return <Login onLogin={login} />;
+  return <Login onLogin={(email, password) => login(email, password)} />;
 }
 
 export default App;

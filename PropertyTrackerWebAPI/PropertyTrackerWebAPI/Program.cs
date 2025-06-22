@@ -44,13 +44,16 @@ builder.Services.AddAuthentication(options =>
 // Configure CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowedOrigins", policy =>
+    options.AddDefaultPolicy(policy =>
     {
         policy.WithOrigins(
                 "http://localhost:5173",   // Default Vite port
                 "http://localhost:5174",   // Alternate Vite port
                 "https://localhost:5173",
-                "https://localhost:5174"); // HTTPS variant
+                "https://localhost:5174")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials(); // HTTPS variant
     });
 });
 
@@ -71,7 +74,7 @@ if (app.Environment.IsDevelopment())
 // Use HTTPS redirection for secure communication
 app.UseHttpsRedirection();
 
-app.UseCors("AllowedOrigins");
+app.UseCors();
 
 app.UseAuthentication(); // JWT authentication middleware
 app.UseAuthorization();
