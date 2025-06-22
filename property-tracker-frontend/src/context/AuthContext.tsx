@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { User, RegisterCredentials, AuthResponse } from '../types/authTypes';
-import { login as authLogin, register as authRegister, logout as authLogout, getCurrentUser } from '../services/auth';
+import { login as authLogin, register as authRegister, logout as authLogout, getCurrentUser, verifyToken, refreshToken } from '../services/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -21,20 +21,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Initialize auth state from localStorage
   useEffect(() => {
-    const initializeAuth = () => {
+    const initializeAuth = async () => {
       const storedUser = getCurrentUser();
       const storedToken = localStorage.getItem('accessToken');
 
       if (storedUser && storedToken) {
-        setUser({
-          id: storedUser.id,
-          email: storedUser.email,
-          role: storedUser.role,
-          username: storedUser.username, // Optional
-          createdAt: storedUser.createdAt // Optional
-        });
-        setIsAuthenticated(true);
-        setToken(storedToken);
+        try {
+          // Verify token is still valid
+          const isValid = await verifyToken(storedToken);
+
+          if(isValid) {
+            setUser({
+              id: storedUser.id,
+              email: storedUser.email,
+              role: storedUser.role,
+              username: storedUser.username, // Optional
+              createdAt: storedUser.createdAt // Optional
+          });
+            setIsAuthenticated(true);
+            setToken(storedToken);
+          } else {
+            // Attempt to refresh troken
+            const newToken = await refreshToken();
+            setToken(newToken.accessToken);
+            setIsAuthenticated(true);
+          }
+        } catch (error) {
+          logout();
+        }
       }
     };
     initializeAuth();

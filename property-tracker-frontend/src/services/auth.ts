@@ -16,6 +16,48 @@ export interface RegisterCredentials {
   password: string;
 }
 
+export const verifyToken = async (token: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_URL}/Auth/verify`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    return false;
+  }
+};
+
+export const refreshToken = async (): Promise<{ accessToken: string }> => {
+  try {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) throw new Error('No refresh token available');
+
+    const response = await fetch(`${API_URL}/Auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${refreshToken}`
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Token refresh failed');
+    }
+
+    const { accessToken } = await response.json();
+    localStorage.setItem('accessToken', accessToken);
+    return { accessToken };
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    logout();
+    throw error;
+  }
+};
+
 export const register = async (credentials: RegisterCredentials): Promise<AuthResponse> => {
   try {
     const response = await fetch(`${API_URL}/Auth/register`, {
@@ -76,33 +118,6 @@ export const login = async (email: string, password: string): Promise<AuthRespon
     return data;
   } catch (error) {
     console.error('Login error:', error);
-    throw error;
-  }
-};
-
-export const refreshToken = async (): Promise<{ accessToken: string }> => {
-  try {
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (!refreshToken) throw new Error('No refresh token available');
-
-    const response = await fetch(`${API_URL}/Auth/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${refreshToken}`
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Token refresh failed');
-    }
-
-    const { accessToken } = await response.json();
-    localStorage.setItem('accessToken', accessToken);
-    return { accessToken };
-  } catch (error) {
-    console.error('Token refresh error:', error);
-    logout();
     throw error;
   }
 };
