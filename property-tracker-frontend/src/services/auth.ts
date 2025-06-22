@@ -8,6 +8,14 @@ export interface AuthResponse {
   userId: number;
   email: string;
   role: string;
+  username?: string; // Add optional username
+  createdAt?: string; // Add optional createdAt
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: string;
 }
 
 export interface RegisterCredentials {
@@ -21,7 +29,8 @@ export const verifyToken = async (token: string): Promise<boolean> => {
     const response = await fetch(`${API_URL}/Auth/verify`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
     });
     return response.ok;
@@ -31,29 +40,46 @@ export const verifyToken = async (token: string): Promise<boolean> => {
   }
 };
 
-export const refreshToken = async (): Promise<{ accessToken: string }> => {
-  try {
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (!refreshToken) throw new Error('No refresh token available');
+export const refreshToken = async (): Promise<RefreshTokenResponse> => {
+  const storedRefreshToken = localStorage.getItem('refreshToken');
+  
+  if (!storedRefreshToken) {
+    throw new Error('No refresh token available');
+  }
 
+  try {
     const response = await fetch(`${API_URL}/Auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${refreshToken}`
       },
+      body: JSON.stringify({ 
+        refreshToken: storedRefreshToken 
+      }),
     });
 
     if (!response.ok) {
-      throw new Error('Token refresh failed');
+      // Log the actual error response
+      const errorText = await response.text();
+      console.error('Refresh token API error:', response.status, errorText);
+      throw new Error(`Token refresh failed: ${response.status}`);
     }
 
-    const { accessToken } = await response.json();
-    localStorage.setItem('accessToken', accessToken);
-    return { accessToken };
+    const data: RefreshTokenResponse = await response.json();
+    
+    if (!data.accessToken || !data.refreshToken) {
+      throw new Error('Invalid refresh response: missing tokens');
+    }
+
+    // Update stored tokens
+    localStorage.setItem('accessToken', data.accessToken);
+    localStorage.setItem('refreshToken', data.refreshToken);
+
+    return data;
   } catch (error) {
     console.error('Token refresh error:', error);
-    logout();
+    // Don't call logout here - let the calling context handle it
+    // This prevents circular dependencies and ensures proper state management
     throw error;
   }
 };
@@ -73,14 +99,14 @@ export const register = async (credentials: RegisterCredentials): Promise<AuthRe
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({ message: 'Registration failed' }));
       throw new Error(errorData.message || 'Registration failed');
     }
 
     return await response.json();
   } catch (error) {
     console.error('Registration error:', error);
-    throw new Error('Registration failed. Please try again.');
+    throw error instanceof Error ? error : new Error('Registration failed. Please try again.');
   }
 };
 
@@ -96,14 +122,14 @@ export const login = async (email: string, password: string): Promise<AuthRespon
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({ message: 'Login failed' }));
       throw new Error(errorData.message || 'Login failed');
     }
 
     const data: AuthResponse = await response.json();
     
-    if (!data.accessToken) {
-      throw new Error('Invalid response from server');
+    if (!data.accessToken || !data.refreshToken) {
+      throw new Error('Invalid response from server: missing tokens');
     }
 
     // Store auth data
@@ -112,13 +138,15 @@ export const login = async (email: string, password: string): Promise<AuthRespon
     localStorage.setItem('user', JSON.stringify({
       id: data.userId,
       email: data.email,
-      role: data.role
+      role: data.role,
+      username: data.username,
+      createdAt: data.createdAt
     }));
 
     return data;
   } catch (error) {
     console.error('Login error:', error);
-    throw error;
+    throw error instanceof Error ? error : new Error('Login failed');
   }
 };
 
@@ -128,7 +156,14 @@ export const isAuthenticated = (): boolean => {
 
 export const getCurrentUser = (): User | null => {
   const user = localStorage.getItem('user');
-  return user ? JSON.parse(user) : null;
+  if (!user) return null;
+  
+  try {
+    return JSON.parse(user);
+  } catch (error) {
+    console.error('Error parsing stored user:', error);
+    return null;
+  }
 };
 
 export const logout = (): void => {

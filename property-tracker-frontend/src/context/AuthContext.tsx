@@ -24,35 +24,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const initializeAuth = async () => {
       const storedUser = getCurrentUser();
       const storedToken = localStorage.getItem('accessToken');
+      const storedRefreshToken = localStorage.getItem('refreshToken');
 
-      if (storedUser && storedToken) {
-        try {
-          // Verify token is still valid
-          const isValid = await verifyToken(storedToken);
+      // If no stored token or user, don't attempt authentication
+      if (!storedUser || !storedToken) {
+        logout();
+        return;
+      }
 
-          if(isValid) {
+      try {
+        // First, try to verify the current token
+        const isValid = await verifyToken(storedToken);
+
+        if (isValid) {
+          // Token is valid, restore user session
+          setUser({
+            id: storedUser.id,
+            email: storedUser.email,
+            role: storedUser.role,
+            username: storedUser.username,
+            createdAt: storedUser.createdAt
+          });
+          setIsAuthenticated(true);
+          setToken(storedToken);
+        } else if (storedRefreshToken) {
+          // Token is invalid, try to refresh if we have a refresh token
+          try {
+            const refreshResponse = await refreshToken();
+            
+            // Update tokens and user state
+            setToken(refreshResponse.accessToken);
+            setIsAuthenticated(true);
+            
+            // Tokens are already updated in localStorage by refreshToken function
+            
+            // Restore user from stored data (since refresh usually doesn't return user info)
             setUser({
               id: storedUser.id,
               email: storedUser.email,
               role: storedUser.role,
-              username: storedUser.username, // Optional
-              createdAt: storedUser.createdAt // Optional
-          });
-            setIsAuthenticated(true);
-            setToken(storedToken);
-          } else {
-            // Attempt to refresh troken
-            const newToken = await refreshToken();
-            setToken(newToken.accessToken);
-            setIsAuthenticated(true);
+              username: storedUser.username,
+              createdAt: storedUser.createdAt
+            });
+          } catch (refreshError) {
+            console.error('Token refresh failed:', refreshError);
+            // Refresh failed, clear everything and force login
+            logout();
           }
-        } catch (error) {
+        } else {
+          // No refresh token available, clear session
           logout();
         }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        // Any error during initialization should clear the session
+        logout();
       }
     };
+
     initializeAuth();
-  }, []);
+  }, []); // Empty dependency array to run only once
 
   const login = async (email: string, password: string) => {
     try {
@@ -62,8 +93,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         id: response.userId,
         email: response.email,
         role: response.role,
-        username: response.username, // Optional
-        createdAt: response.createdAt // Optional
+        username: response.username,
+        createdAt: response.createdAt
       };
 
       setUser(userData);
@@ -87,8 +118,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         id: response.userId,
         email: response.email,
         role: response.role,
-        username: response.username, // Optional
-        createdAt: response.createdAt // Optional
+        username: response.username,
+        createdAt: response.createdAt
       };
 
       setUser(userData);

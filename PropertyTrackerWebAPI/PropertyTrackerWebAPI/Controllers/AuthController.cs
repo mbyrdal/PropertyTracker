@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PropertyTrackerWebAPI.DTOs;
 using PropertyTrackerWebAPI.Models;
@@ -58,8 +57,7 @@ namespace PropertyTrackerWebAPI.Controllers
 
                 // Generate tokens
                 var accessToken = _jwtService.GenerateAccessToken(user.Id.ToString(), user.Email);
-
-                var (refreshToken, refreshTokenExpiry) = _jwtService.GenerateRefreshToken();
+                var (refreshToken, refreshTokenExpiry) = _jwtService.GenerateRefreshToken(user.Id.ToString(), user.Email);
 
                 _logger.LogInformation($"User {user.Email} logged in successfully");
 
@@ -148,5 +146,42 @@ namespace PropertyTrackerWebAPI.Controllers
             }
         }
 
+        [HttpPost("refresh")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public IActionResult RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            try
+            {
+                // Validate request
+                if (request == null || string.IsNullOrWhiteSpace(request.RefreshToken))
+                {
+                    return Unauthorized(new { Message = "Refresh token is required" });
+                }
+
+                // Validate the refresh token
+                var tokenValidation = _jwtService.ValidateRefreshToken(request.RefreshToken);
+                if (!tokenValidation.IsValid)
+                {
+                    return Unauthorized(new { Message = tokenValidation.ErrorMessage ?? "Invalid refresh token" });
+                }
+
+                // Generate new tokens
+                var newAccessToken = _jwtService.GenerateAccessToken(tokenValidation.UserId, tokenValidation.Email);
+                var (newRefreshToken, expiry) = _jwtService.GenerateRefreshToken(tokenValidation.UserId, tokenValidation.Email);
+
+                return Ok(new RefreshTokenResponse
+                {
+                    AccessToken = newAccessToken,
+                    RefreshToken = newRefreshToken,
+                    ExpiresAt = expiry
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing token");
+                return StatusCode(500, new { Message = "Token refresh failed" });
+            }
+        }
     }
 }

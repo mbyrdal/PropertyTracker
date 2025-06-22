@@ -36,8 +36,25 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+        ValidAudiences = builder.Configuration.GetSection("Jwt:Audiences").Get<string[]>()
+    ?? new[] { builder.Configuration["Jwt:Audience"]! }, // with fallback
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
+        ClockSkew = TimeSpan.FromSeconds(30) // Add this line
+    };
+
+    // Debugging purposes
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine($"Authentication failed: {context.Exception.Message}");
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            Console.WriteLine("Token validated successfully");
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -47,10 +64,19 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
     {
         policy.WithOrigins(
-                "http://localhost:5173",   // Default Vite port
-                "http://localhost:5174",   // Alternate Vite port
+                // HTTP
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "http://localhost:5175",   
+                "http://localhost:5176",   
+                "http://localhost:5177",   
+
+                // HTTPS
                 "https://localhost:5173",
-                "https://localhost:5174")
+                "https://localhost:5174",
+                "https://localhost:5175",  
+                "https://localhost:5176",  
+                "https://localhost:5177")
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials(); // HTTPS variant
