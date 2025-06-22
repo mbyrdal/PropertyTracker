@@ -6,6 +6,7 @@ import { login as authLogin, register as authRegister, logout as authLogout, get
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  token: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   register: (credentials: RegisterCredentials) => Promise<void>;
@@ -16,12 +17,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('accessToken'));
 
   // Initialize auth state from localStorage
   useEffect(() => {
     const initializeAuth = () => {
       const storedUser = getCurrentUser();
-      if (storedUser) {
+      const storedToken = localStorage.getItem('accessToken');
+
+      if (storedUser && storedToken) {
         setUser({
           id: storedUser.id,
           email: storedUser.email,
@@ -30,6 +34,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           createdAt: storedUser.createdAt // Optional
         });
         setIsAuthenticated(true);
+        setToken(storedToken);
       }
     };
     initializeAuth();
@@ -38,7 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       const response: AuthResponse = await authLogin(email, password);
-      
+
       const userData: User = {
         id: response.userId,
         email: response.email,
@@ -49,7 +54,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setUser(userData);
       setIsAuthenticated(true);
-      
+      setToken(response.accessToken);
+
       localStorage.setItem('accessToken', response.accessToken);
       localStorage.setItem('refreshToken', response.refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
@@ -62,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (credentials: RegisterCredentials) => {
     try {
       const response: AuthResponse = await authRegister(credentials);
-      
+
       const userData: User = {
         id: response.userId,
         email: response.email,
@@ -73,7 +79,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setUser(userData);
       setIsAuthenticated(true);
-      
+      setToken(response.accessToken);
+
       localStorage.setItem('accessToken', response.accessToken);
       localStorage.setItem('refreshToken', response.refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
@@ -87,19 +94,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     authLogout();
     setUser(null);
     setIsAuthenticated(false);
+    setToken(null);
+
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated, 
-      login, 
-      logout, 
-      register 
-    }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, token, login, logout, register }}>
       {children}
     </AuthContext.Provider>
   );

@@ -18,9 +18,9 @@ const Login = () => {
     
     try {
       await authLogin(email, password);
-      navigate('/properties');
+      navigate('/');
     } catch (err) {
-      setError('Login failed. Please try again.');
+      setError('Login mislykkedes. Prøv venligst igen.');
     } finally {
       setIsLoading(false);
     }
@@ -37,11 +37,11 @@ const Login = () => {
             </svg>
             <h1>PropertyTracker</h1>
           </div>
-          <p>Manage your properties with ease</p>
+          <p>Administrer dine ejendomme nemt</p>
         </div>
 
         <div className="login-content">
-          <h2>Welcome back</h2>
+          <h2>Velkommen tilbage</h2>
           
           {error && (
             <div className="login-error">
@@ -60,12 +60,12 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="you@example.com"
+                placeholder="din@email.com"
               />
             </div>
 
             <div className="form-group">
-              <label>Password</label>
+              <label>Adgangskode</label>
               <input
                 type="password"
                 value={password}
@@ -81,14 +81,14 @@ const Login = () => {
                     <circle cx="12" cy="12" r="10" />
                     <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Signing in...
+                  Logger ind...
                 </>
-              ) : 'Sign in'}
+              ) : 'Log ind'}
             </button>
           </form>
 
           <div className="login-footer">
-            Don't have an account? <a href="#">Sign up</a>
+            Har du ikke en konto? <a href="#">Tilmeld dig</a>
           </div>
         </div>
       </div>

@@ -66,7 +66,7 @@ export default function MapPage() {
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading properties...</p>
+          <p className="text-gray-600">Henter ejendomme...</p>
         </div>
       </div>
     );
@@ -77,7 +77,7 @@ export default function MapPage() {
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md">
-            <h2 className="text-red-800 font-semibold mb-2">Error Loading Properties</h2>
+            <h2 className="text-red-800 font-semibold mb-2">Fejl ved hentning af ejendomme</h2>
             <p className="text-red-600">{error}</p>
             <button
               onClick={() => window.location.reload()}
