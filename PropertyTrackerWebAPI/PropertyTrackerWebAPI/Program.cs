@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using PropertyTrackerWebAPI.EFDataContext;
 using PropertyTrackerWebAPI.Repositories;
 using PropertyTrackerWebAPI.Services;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,12 +15,46 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Register services and repositories for dependency injection
 builder.Services.AddScoped<IPropertyRepository, PropertyRepository>();
 builder.Services.AddScoped<IPropertyService, PropertyService>();
+builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 builder.Services.AddHttpClient<GeocodingService>();
 builder.Services.AddScoped<GeocodingService>();
 
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+    };
+});
+
+// Configure CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowedOrigins", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:5173",   // Default Vite port
+                "http://localhost:5174",   // Alternate Vite port
+                "https://localhost:5173",
+                "https://localhost:5174"); // HTTPS variant
+    });
+});
+
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -27,18 +64,16 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     await SeedDatabaseAsync(app);
-
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// Enable CORS to allow requests from any origin
-app.UseCors(builder => builder.AllowAnyOrigin()
-           .AllowAnyMethod()
-           .AllowAnyHeader());
-
+// Use HTTPS redirection for secure communication
 app.UseHttpsRedirection();
 
+app.UseCors("AllowedOrigins");
+
+app.UseAuthentication(); // JWT authentication middleware
 app.UseAuthorization();
 
 app.MapControllers();

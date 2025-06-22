@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import EnhancedPropertyMap from './components/EnhancedPropertyMap';
+import Login from './components/Login';
 import type { EnhancedProperty } from './types/property';
 import { NavigationProvider } from './context/NavigationContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import 'leaflet/dist/leaflet.css';
 import './index.css';
 
@@ -63,15 +66,24 @@ const transformProperties = (apiProperties: ApiProperty[]): EnhancedProperty[] =
   }));
 };
 
-function App() {
+const PropertyListWrapper = () => {
   const [properties, setProperties] = useState<EnhancedProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     const fetchProperties = async () => {
       try {
-        const response = await fetch('https://localhost:7188/api/property');
+        const token = localStorage.getItem('token');
+        const response = await fetch('https://localhost:7188/api/property', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         
         const apiData: ApiProperty[] = await response.json();
@@ -95,7 +107,11 @@ function App() {
     };
 
     fetchProperties();
-  }, []);
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   if (loading) return (
     <div className="loading">
@@ -119,6 +135,29 @@ function App() {
       </div>
     </NavigationProvider>
   );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route 
+            path="/login" 
+            element={<LoginWrapper />} 
+          />
+          <Route path="/" element={<PropertyListWrapper />} />
+          <Route path="/properties" element={<PropertyListWrapper />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
+}
+
+// Separate component for the login route
+function LoginWrapper() {
+  const { login } = useAuth();
+  return <Login onLogin={login} />;
 }
 
 export default App;
