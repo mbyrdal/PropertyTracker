@@ -59,7 +59,7 @@ namespace PropertyTrackerWebAPI.Controllers
                 // Generate tokens
                 var accessToken = _jwtService.GenerateAccessToken(user.Id.ToString(), user.Email);
 
-                var refreshToken = _jwtService.GenerateRefreshToken();
+                var (refreshToken, refreshTokenExpiry) = _jwtService.GenerateRefreshToken();
 
                 _logger.LogInformation($"User {user.Email} logged in successfully");
 
@@ -67,6 +67,7 @@ namespace PropertyTrackerWebAPI.Controllers
                 {
                     AccessToken = accessToken,
                     RefreshToken = refreshToken,
+                    RefreshTokenExpiry = refreshTokenExpiry,
                     UserId = user.Id,
                     Email = user.Email,
                     Role = user.Role
@@ -112,5 +113,40 @@ namespace PropertyTrackerWebAPI.Controllers
                 CreatedAt = user.CreatedAt
             });
         }
+
+        [HttpPost("verify")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public IActionResult VerifyToken()
+        {
+            try
+            {
+                // Get the token from the Authorization header
+                var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+
+                if (string.IsNullOrEmpty(token))
+                {
+                    _logger.LogWarning("VerifyToken called with empty token");
+                    return Unauthorized();
+                }
+
+                // Verify the token using your JWT service
+                var principal = _jwtService.ValidateToken(token);
+                if (principal == null)
+                {
+                    _logger.LogWarning("Token verification failed");
+                    return Unauthorized();
+                }
+
+                _logger.LogInformation("Token verified successfully");
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during token verification");
+                return StatusCode(500, new { Message = "An error occurred during token verification." });
+            }
+        }
+
     }
 }

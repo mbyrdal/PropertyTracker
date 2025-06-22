@@ -21,11 +21,12 @@ namespace PropertyTrackerWebAPI.Services
         {
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, userId), // User ID (from User.Id)
-                new Claim(JwtRegisteredClaimNames.Email, email), // User.Email
-                new Claim(ClaimTypes.Name, email), // Alternative for User.Identity.Name
-                new Claim(ClaimTypes.Role, "User"), // Default role (match User.Role)
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) // Unique token ID
+                new Claim(JwtRegisteredClaimNames.Sub, userId),
+                new Claim(JwtRegisteredClaimNames.Email, email),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+                new Claim(ClaimTypes.Name, email),
+                new Claim(ClaimTypes.Role, "User") // Consider making this dynamic based on user
             };
 
             var tokenDescriptor = new SecurityTokenDescriptor
@@ -34,21 +35,21 @@ namespace PropertyTrackerWebAPI.Services
                 Audience = _configuration["Jwt:Audience"],
                 Subject = new ClaimsIdentity(claims),
                 Expires = DateTime.UtcNow.AddMinutes(GetTokenExpiryMinutes()),
-                NotBefore = DateTime.UtcNow, // explicitly set NotBefore to current time
-                SigningCredentials = new SigningCredentials(_securityKey, SecurityAlgorithms.HmacSha256Signature)
+                SigningCredentials = new SigningCredentials(_securityKey, SecurityAlgorithms.HmacSha256)
             };
 
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+            return new JwtSecurityTokenHandler().CreateEncodedJwt(tokenDescriptor);
         }
 
-        public string GenerateRefreshToken()
+        public (string Token, DateTime Expiry) GenerateRefreshToken()
         {
             var randomNumber = new byte[64];
             using var rng = RandomNumberGenerator.Create();
             rng.GetBytes(randomNumber);
-            return Convert.ToBase64String(randomNumber);
+
+            var token = Convert.ToBase64String(randomNumber);
+            var expiry = DateTime.UtcNow.AddDays(3); // 3-day expiry for refresh token
+            return (token, expiry);
         }
 
         public ClaimsPrincipal? ValidateToken(string token, bool validateLifetime = true)
