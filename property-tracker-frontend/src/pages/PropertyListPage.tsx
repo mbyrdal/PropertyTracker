@@ -24,7 +24,7 @@ export default function PropertyListPage() {
   const { currentView } = useNavigation();
   const navigate          = useNavigate();
 
-  const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7188/api';
+  const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:5000/api';
 
   /* ───────────────────────────────────────── fetch ───────────────────────────────────────── */
   useEffect(() => {

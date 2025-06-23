@@ -73,7 +73,7 @@ const PropertyMapWrapper = () => {
     const fetchProperties = async () => {
       try {
         const token = localStorage.getItem('accessToken');
-        const response = await fetch('https://localhost:7188/api/property', {
+        const response = await fetch('https://localhost:5000/api/property', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
