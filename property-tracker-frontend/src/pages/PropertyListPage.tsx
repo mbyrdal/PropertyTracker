@@ -21,7 +21,7 @@ export default function PropertyListPage() {
   const [error, setError] = useState<string | null>(null);
 
   const { token }         = useAuth();
-  const { currentView, setCurrentView } = useNavigation();
+  const { currentView } = useNavigation();
   const navigate          = useNavigate();
 
   const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7188/api';
