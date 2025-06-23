@@ -1,16 +1,14 @@
-version: '3.8'
-
 services:
   frontend:
-    build: ./frontend
+    build: ./property-tracker-frontend
     ports:
       - "8080:80"
     depends_on:
       - backend
 
   backend:
-  build: ./PropertyTrackerWebAPI/PropertyTrackerWebAPI
-  ports:
-    - "5000:5000"
-  environment:
-    - ASPNETCORE_ENVIRONMENT=Production
+    build: ./PropertyTrackerWebAPI/PropertyTrackerWebAPI
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
