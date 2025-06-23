@@ -5,91 +5,95 @@ using PropertyTrackerWebAPI.Repositories;
 using PropertyTrackerWebAPI.Services;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.OpenApi.Models;
+using PropertyTrackerWebAPI.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Add services to the container
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("NeonDB")));
 
-// Register services and repositories for dependency injection
+// Dependency Injection
 builder.Services.AddScoped<IPropertyRepository, PropertyRepository>();
 builder.Services.AddScoped<IPropertyService, PropertyService>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-
 builder.Services.AddHttpClient<GeocodingService>();
 builder.Services.AddScoped<GeocodingService>();
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudiences = builder.Configuration.GetSection("Jwt:Audiences").Get<string[]>()
-    ?? new[] { builder.Configuration["Jwt:Audience"]! }, // with fallback
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
-        ClockSkew = TimeSpan.FromSeconds(30) // Add this line
-    };
+// Configure JWT Authentication
+var jwtKeyBase64 = builder.Configuration["Jwt:Key"]!;
+var keyBytes = Convert.FromBase64String(jwtKeyBase64);
 
-    // Debugging purposes
-    options.Events = new JwtBearerEvents
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        OnAuthenticationFailed = context =>
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            Console.WriteLine($"Authentication failed: {context.Exception.Message}");
-            return Task.CompletedTask;
-        },
-        OnTokenValidated = context =>
-        {
-            Console.WriteLine("Token validated successfully");
-            return Task.CompletedTask;
-        }
-    };
-});
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+            ClockSkew = TimeSpan.Zero // No leeway for token expiration
+        };
+    });
 
-// Configure CORS
+// Configure CORS to allow any localhost port
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy =>
+    options.AddPolicy("DynamicPorts", policy =>
     {
-        policy.WithOrigins(
-                // HTTP
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5175",   
-                "http://localhost:5176",   
-                "http://localhost:5177",   
-
-                // HTTPS
-                "https://localhost:5173",
-                "https://localhost:5174",
-                "https://localhost:5175",  
-                "https://localhost:5176",  
-                "https://localhost:5177")
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials(); // HTTPS variant
+        policy
+            .SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+// Swagger with JWT Auth
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "PropertyTracker API", Version = "v1" });
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        In = ParameterLocation.Header,
+        Description = "Enter 'Bearer {your JWT token}'",
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Seed the DB if in development
 if (app.Environment.IsDevelopment())
 {
     await SeedDatabaseAsync(app);
@@ -97,19 +101,15 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Use HTTPS redirection for secure communication
 app.UseHttpsRedirection();
-
-app.UseCors();
-
-app.UseAuthentication(); // JWT authentication middleware
+app.UseCors("DynamicPorts");
+app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
 
-// This method seeds the database with initial data if it is empty.
+
+// Seed database on app startup
 async Task SeedDatabaseAsync(WebApplication app)
 {
     using var scope = app.Services.CreateScope();

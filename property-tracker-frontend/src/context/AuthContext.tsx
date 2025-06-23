@@ -22,17 +22,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Initialize auth state from localStorage
   useEffect(() => {
     const initializeAuth = async () => {
-      const storedUser = getCurrentUser();
-      const storedToken = localStorage.getItem('accessToken');
-      const storedRefreshToken = localStorage.getItem('refreshToken');
-
-      // If no stored token or user, don't attempt authentication
-      if (!storedUser || !storedToken) {
-        logout();
-        return;
-      }
-
       try {
+        // Get fresh values from localStorage
+        let storedToken = localStorage.getItem('accessToken');
+        const storedUser = getCurrentUser();
+        const storedRefreshToken = localStorage.getItem('refreshToken');
+
+        // TEMPORARY FIX: Clear old tokens that might be incompatible
+        if (storedToken) {
+          try {
+            // Try to decode the token to check if it has multiple audiences
+            const payload = JSON.parse(atob(storedToken.split('.')[1]));
+            
+            // If the token doesn't have an array of audiences, it's old - clear it
+            if (!Array.isArray(payload.aud)) {
+              console.log('Clearing old token format');
+              logout();
+              return;
+            }
+          } catch (error) {
+            console.log('Invalid token format, clearing');
+            logout();
+            return;
+          }
+        }
+
+        // If no stored token or user, don't attempt authentication
+        if (!storedUser || !storedToken) {
+          logout();
+          return;
+        }
+
         // First, try to verify the current token
         const isValid = await verifyToken(storedToken);
 
@@ -50,13 +70,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else if (storedRefreshToken) {
           // Token is invalid, try to refresh if we have a refresh token
           try {
+            console.log('Access token invalid, attempting refresh...');
             const refreshResponse = await refreshToken();
             
             // Update tokens and user state
             setToken(refreshResponse.accessToken);
             setIsAuthenticated(true);
-            
-            // Tokens are already updated in localStorage by refreshToken function
             
             // Restore user from stored data (since refresh usually doesn't return user info)
             setUser({
@@ -66,6 +85,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               username: storedUser.username,
               createdAt: storedUser.createdAt
             });
+            
+            console.log('Token refreshed successfully');
           } catch (refreshError) {
             console.error('Token refresh failed:', refreshError);
             // Refresh failed, clear everything and force login
@@ -73,6 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } else {
           // No refresh token available, clear session
+          console.log('No refresh token available, clearing session');
           logout();
         }
       } catch (error) {
@@ -141,6 +163,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsAuthenticated(false);
     setToken(null);
 
+    // Clear localStorage (redundant with authLogout but ensures consistency)
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
