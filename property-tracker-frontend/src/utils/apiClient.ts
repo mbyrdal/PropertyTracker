@@ -1,7 +1,7 @@
 // utils/apiClient.ts
 import { refreshToken } from '../services/auth';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 class ApiClient {
   private isRefreshing = false;

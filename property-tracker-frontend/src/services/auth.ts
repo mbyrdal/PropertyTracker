@@ -1,6 +1,6 @@
 import type { User } from '../types/authTypes';
 
-const API_URL = import.meta.env.VITE_BASE_API_URL || 'https://localhost:5000/api';
+const API_URL = import.meta.env.VITE_BASE_API_URL || 'http://localhost:5000/api';
 
 export interface AuthResponse {
   accessToken: string;
