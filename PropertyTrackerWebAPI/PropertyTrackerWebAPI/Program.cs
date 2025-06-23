@@ -106,6 +106,11 @@ app.UseCors("DynamicPorts");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// DOCKER CONFIG STUFF
+app.Urls.Clear();
+app.Urls.Add("http://0.0.0.0:5000");
+
 app.Run();
 
 
